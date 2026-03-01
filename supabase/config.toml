@@ -1,0 +1,13 @@
+project_id = "uasaarrugwhqzgqzekjj"
+
+[functions.analyze-job]
+verify_jwt = false
+
+[functions.mlops-metrics]
+verify_jwt = false
+
+[functions.retrain-webhook]
+verify_jwt = false
+
+[functions.daily-monitoring]
+verify_jwt = false
