@@ -11,7 +11,7 @@ import FileDropZone from "@/components/FileDropZone";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
-import { analyzeJob } from "@/lib/mlEngine";
+import { analyzeJobViaFlask } from "@/lib/mlEngine";
 
 interface JobData {
   title: string;
@@ -129,8 +129,8 @@ const Analyze = () => {
         return;
       }
 
-      // Run local mock ML engine for detailed scores
-      const mlScores = analyzeJob(formData);
+      // Call real Python ML models via Flask backend (falls back to TS if offline)
+      const mlScores = await analyzeJobViaFlask(formData);
 
       const enrichedResult = {
         ...data,

@@ -146,3 +146,58 @@ export function analyzeJob(job: JobInput): MLScores {
         llmExplanation,
     };
 }
+
+// ============================================================
+// FLASK API INTEGRATION — calls real Python ML models
+// ============================================================
+
+export interface FlaskAnalysisResult extends MLScores {
+    isFake: boolean;
+    confidence: number;
+    contentScore: number;
+}
+
+/**
+ * analyzeJobViaFlask — sends job data to Flask backend (real Python ML models).
+ * Falls back to local TypeScript models if Flask is unreachable.
+ */
+export async function analyzeJobViaFlask(job: JobInput): Promise<FlaskAnalysisResult> {
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(job),
+            signal: AbortSignal.timeout(8000), // 8s timeout
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Flask returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        return {
+            isFake: data.isFake,
+            confidence: data.confidence,
+            textScore: data.textScore,
+            anomalyScore: data.anomalyScore,
+            metadataScore: data.metadataScore,
+            contentScore: data.contentScore,
+            finalScore: data.finalScore,
+            riskLevel: data.riskLevel,
+            factors: data.factors,
+            llmExplanation: data.llmExplanation,
+        };
+    } catch (err) {
+        // Graceful fallback: use TypeScript models if Flask is offline
+        console.warn('[mlEngine] Flask unreachable — falling back to TypeScript models:', err);
+        const ts = analyzeJob(job);
+        return {
+            ...ts,
+            isFake: ts.finalScore >= 50,
+            confidence: ts.finalScore,
+            contentScore: ts.textScore,
+        };
+    }
+}
+
