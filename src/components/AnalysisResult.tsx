@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { ThreatBadge } from "./ui/ThreatBadge";
 import {
   Shield,
@@ -9,6 +10,70 @@ import {
 } from "lucide-react";
 import ModelScorePanel from "@/components/ModelScorePanel";
 import LLMExplanationPanel from "@/components/LLMExplanationPanel";
+import DownloadReportButton from "@/components/DownloadReportButton";
+
+// --------------- Animated Risk Gauge ---------------
+const RADIUS = 52;
+const CIRC = 2 * Math.PI * RADIUS;
+
+function getRiskColor(score: number): string {
+  if (score < 25) return "#22c55e";   // green
+  if (score < 50) return "#eab308";   // yellow
+  if (score < 75) return "#f97316";   // orange
+  return "#ef4444";                   // red
+}
+
+const RiskGauge = ({ score }: { score: number }) => {
+  const circleRef = useRef<SVGCircleElement>(null);
+  const color = getRiskColor(score);
+  const riskLabel = score < 25 ? "LOW" : score < 50 ? "MEDIUM" : score < 75 ? "HIGH" : "CRITICAL";
+
+  useEffect(() => {
+    const el = circleRef.current;
+    if (!el) return;
+    // Start from 0 then animate to target
+    el.style.strokeDashoffset = String(CIRC);
+    const target = CIRC - (score / 100) * CIRC;
+    requestAnimationFrame(() => {
+      el.style.transition = "stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1)";
+      el.style.strokeDashoffset = String(target);
+    });
+  }, [score]);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative w-36 h-36">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          {/* Background track */}
+          <circle cx="60" cy="60" r={RADIUS} fill="none" stroke="#1f2937" strokeWidth="10" />
+          {/* Animated fill */}
+          <circle
+            ref={circleRef}
+            cx="60" cy="60" r={RADIUS}
+            fill="none"
+            stroke={color}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={CIRC}
+            strokeDashoffset={CIRC}
+            style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+          />
+        </svg>
+        {/* Centre score */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-extrabold" style={{ color }}>{score}</span>
+          <span className="text-xs text-gray-400 tracking-widest">/100</span>
+        </div>
+      </div>
+      <span
+        className="text-xs font-bold tracking-widest px-3 py-1 rounded-full border"
+        style={{ color, borderColor: color, backgroundColor: `${color}15` }}
+      >
+        {riskLabel} RISK
+      </span>
+    </div>
+  );
+};
 
 interface ExtractedData {
   title: string | null;
@@ -38,7 +103,7 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
   // Derive model scores from confidence if not explicitly provided
   const hasMLScores = textScore !== undefined && metadataScore !== undefined && anomalyScore !== undefined;
   const finalScore = hasMLScores
-    ? Math.round(0.6 * textScore! + 0.3 * metadataScore! + 0.1 * anomalyScore!)
+    ? Math.round(0.7 * textScore! + 0.3 * metadataScore!)
     : confidence;
   const riskLevel =
     finalScore < 25 ? "LOW" : finalScore < 50 ? "MEDIUM" : finalScore < 75 ? "HIGH" : "CRITICAL";
@@ -55,40 +120,45 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
       ======================== */}
       <div
         className={`p-8 rounded-2xl border shadow-elevated ${isFake
-            ? "bg-black border-red-800/40 shadow-danger"
-            : "bg-black border-green-800/40"
+          ? "bg-black border-red-800/40 shadow-danger"
+          : "bg-black border-green-800/40"
           }`}
       >
         {/* HEADER */}
-        <div className="flex items-center gap-5 mb-8">
-          <div
-            className={`p-5 rounded-xl ${isFake
+        <div className="flex items-start justify-between gap-5 mb-8 flex-wrap">
+          <div className="flex items-center gap-5">
+            <div
+              className={`p-5 rounded-xl ${isFake
                 ? "bg-red-600 animate-alert-pulse"
                 : "bg-green-600"
-              }`}
-          >
-            {isFake ? (
-              <AlertTriangle className="w-10 h-10 text-white" />
-            ) : (
-              <Shield className="w-10 h-10 text-white" />
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <h3
-              className={`text-3xl font-extrabold tracking-widest ${isFake ? "text-red-500" : "text-green-500"
                 }`}
             >
-              {isFake ? "THREAT DETECTED" : "NO FRAUD SIGNALS"}
-            </h3>
+              {isFake ? (
+                <AlertTriangle className="w-10 h-10 text-white" />
+              ) : (
+                <Shield className="w-10 h-10 text-white" />
+              )}
+            </div>
 
-            {/* Threat Badge */}
-            <ThreatBadge fraud={isFake} confidence={confidence} />
+            <div className="flex flex-col gap-3">
+              <h3
+                className={`text-3xl font-extrabold tracking-widest ${isFake ? "text-red-500" : "text-green-500"
+                  }`}
+              >
+                {isFake ? "THREAT DETECTED" : "NO FRAUD SIGNALS"}
+              </h3>
 
-            <p className="text-gray-400 text-sm tracking-wide">
-              ML CONFIDENCE LEVEL: {confidence}%
-            </p>
+              {/* Threat Badge */}
+              <ThreatBadge fraud={isFake} confidence={confidence} />
+
+              <p className="text-gray-400 text-sm tracking-wide">
+                ML CONFIDENCE LEVEL: {confidence}%
+              </p>
+            </div>
           </div>
+
+          {/* Animated Risk Gauge */}
+          <RiskGauge score={hasMLScores ? finalScore : confidence} />
         </div>
 
         {/* CONFIDENCE BAR */}
@@ -101,8 +171,8 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
           <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-1000 ${isFake
-                  ? "bg-red-600 shadow-danger"
-                  : "bg-green-600"
+                ? "bg-red-600 shadow-danger"
+                : "bg-green-600"
                 }`}
               style={{ width: `${confidence}%` }}
             />
@@ -120,8 +190,8 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
               <div
                 key={index}
                 className={`flex items-center gap-3 p-4 bg-gray-900 rounded-lg ${isFake
-                    ? "border border-red-900/20"
-                    : "border border-green-900/20"
+                  ? "border border-red-900/20"
+                  : "border border-green-900/20"
                   }`}
               >
                 {isFake ? (
@@ -140,8 +210,8 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
         {/* RECOMMENDATION */}
         <div
           className={`mt-8 p-5 rounded-xl ${isFake
-              ? "bg-gray-900 border border-red-900/30"
-              : "bg-gray-900 border border-green-900/30"
+            ? "bg-gray-900 border border-red-900/30"
+            : "bg-gray-900 border border-green-900/30"
             }`}
         >
           <div className="flex items-start gap-4">
@@ -180,13 +250,35 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
       />
 
       {/* =======================
+          DOWNLOAD REPORT BUTTON
+      ======================== */}
+      <div className="flex justify-end">
+        <DownloadReportButton
+          data={[]}
+          singleJob={{
+            title: extractedData?.title || "Job Analysis",
+            company: extractedData?.company || "Unknown Company",
+            location: extractedData?.location || undefined,
+            salary: extractedData?.salary || undefined,
+            finalScore: hasMLScores ? finalScore : confidence,
+            riskLevel,
+            factors,
+            llmExplanation: llmExplanation || defaultExplanation,
+            textScore: hasMLScores ? textScore! : Math.min(100, confidence + 5),
+            metadataScore: hasMLScores ? metadataScore! : Math.max(0, confidence - 10),
+            anomalyScore: hasMLScores ? anomalyScore! : Math.round(confidence * 0.7),
+          }}
+        />
+      </div>
+
+      {/* =======================
           EXTRACTED DATA PANEL
       ======================== */}
       {extractedData && (
         <div
           className={`p-6 rounded-2xl bg-black shadow-card ${isFake
-              ? "border border-red-900/30"
-              : "border border-green-900/30"
+            ? "border border-red-900/30"
+            : "border border-green-900/30"
             }`}
         >
           <div className="flex items-center gap-3 mb-6">

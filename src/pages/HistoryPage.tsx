@@ -13,6 +13,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// ---- Risk badge helper ----
+function getRiskInfo(confidence: number, isFraud: boolean): { label: string; color: string; bg: string; bar: string } {
+  if (!isFraud || confidence < 25) return { label: "LOW", color: "#22c55e", bg: "bg-green-900/20", bar: "bg-green-500" };
+  if (confidence < 50) return { label: "MEDIUM", color: "#eab308", bg: "bg-yellow-900/20", bar: "bg-yellow-400" };
+  if (confidence < 75) return { label: "HIGH", color: "#f97316", bg: "bg-orange-900/20", bar: "bg-orange-500" };
+  return { label: "CRITICAL", color: "#ef4444", bg: "bg-red-900/20", bar: "bg-red-500" };
+}
+
 interface AnalysisRecord {
   id: string;
   title: string | null;
@@ -65,7 +73,7 @@ const HistoryPage = () => {
         .eq("id", id);
 
       if (error) throw error;
-      
+
       setHistoryData(prev => prev.filter(item => item.id !== id));
       toast.success("Record deleted");
     } catch (error) {
@@ -75,11 +83,11 @@ const HistoryPage = () => {
   };
 
   const filteredHistory = historyData.filter((item) => {
-    const matchesSearch = 
+    const matchesSearch =
       (item.title?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
       (item.company?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
-    const matchesFilter = filter === "all" || 
-      (filter === "fraud" && item.is_fraud) || 
+    const matchesFilter = filter === "all" ||
+      (filter === "fraud" && item.is_fraud) ||
       (filter === "safe" && !item.is_fraud);
     return matchesSearch && matchesFilter;
   });
@@ -186,23 +194,32 @@ const HistoryPage = () => {
                     <p className="text-muted-foreground">{item.location || "N/A"}</p>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          !item.is_fraud
-                            ? "bg-success/10 text-success"
-                            : "bg-destructive/10 text-destructive"
-                        }`}
-                      >
-                        {!item.is_fraud ? (
-                          <CheckCircle2 className="w-3 h-3" />
-                        ) : (
-                          <AlertTriangle className="w-3 h-3" />
-                        )}
-                        {!item.is_fraud ? "Safe" : "Fraud"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{item.confidence}%</span>
-                    </div>
+                    {(() => {
+                      const risk = getRiskInfo(item.confidence, item.is_fraud);
+                      return (
+                        <div className="flex flex-col gap-1.5 min-w-[100px]">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-widest ${risk.bg}`}
+                            style={{ color: risk.color, border: `1px solid ${risk.color}40` }}
+                          >
+                            {!item.is_fraud ? (
+                              <CheckCircle2 className="w-3 h-3" />
+                            ) : (
+                              <AlertTriangle className="w-3 h-3" />
+                            )}
+                            {risk.label}
+                          </span>
+                          {/* Mini confidence bar */}
+                          <div className="h-1 bg-gray-800 rounded-full overflow-hidden w-full">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${risk.bar}`}
+                              style={{ width: `${item.confidence}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground">{item.confidence}% confidence</span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="p-4 hidden sm:table-cell">
                     <p className="text-sm text-muted-foreground">
@@ -211,17 +228,17 @@ const HistoryPage = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8"
                         onClick={() => setSelectedRecord(item)}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         onClick={() => deleteRecord(item.id)}
                       >
@@ -238,8 +255,8 @@ const HistoryPage = () => {
         {filteredHistory.length === 0 && (
           <div className="p-12 text-center">
             <p className="text-muted-foreground">
-              {historyData.length === 0 
-                ? "No analyses yet. Start by analyzing a job posting!" 
+              {historyData.length === 0
+                ? "No analyses yet. Start by analyzing a job posting!"
                 : "No results found"}
             </p>
           </div>
@@ -259,7 +276,7 @@ const HistoryPage = () => {
               {selectedRecord?.title || "Job Analysis Details"}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedRecord && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -284,11 +301,10 @@ const HistoryPage = () => {
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Status</p>
                 <span
-                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium ${
-                    !selectedRecord.is_fraud
-                      ? "bg-success/10 text-success"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium ${!selectedRecord.is_fraud
+                    ? "bg-success/10 text-success"
+                    : "bg-destructive/10 text-destructive"
+                    }`}
                 >
                   {!selectedRecord.is_fraud ? (
                     <CheckCircle2 className="w-4 h-4" />
@@ -317,8 +333,8 @@ const HistoryPage = () => {
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Description</p>
                   <p className="text-sm bg-secondary/50 p-3 rounded-lg">
-                    {selectedRecord.description.length > 500 
-                      ? selectedRecord.description.substring(0, 500) + "..." 
+                    {selectedRecord.description.length > 500
+                      ? selectedRecord.description.substring(0, 500) + "..."
                       : selectedRecord.description}
                   </p>
                 </div>
