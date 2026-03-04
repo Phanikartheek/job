@@ -145,8 +145,6 @@ const BulkUploadPage = () => {
         }
     };
 
-    const MAX_ROWS = 20000;
-
     const parseFile = async (f: File) => {
         const ext = f.name.split(".").pop()?.toLowerCase();
 
@@ -278,8 +276,8 @@ const BulkUploadPage = () => {
                             Running AI pipeline on {file?.name}… {progress}%
                         </p>
                         <span className={`ml-auto px-2 py-0.5 rounded text-xs font-bold ${processingMode === "flask"
-                                ? "bg-blue-900/50 text-blue-300"
-                                : "bg-gray-800 text-gray-400"
+                            ? "bg-blue-900/50 text-blue-300"
+                            : "bg-gray-800 text-gray-400"
                             }`}>
                             {processingMode === "flask" ? "🐍 Flask Mode" : "💻 Browser Mode"}
                         </span>
