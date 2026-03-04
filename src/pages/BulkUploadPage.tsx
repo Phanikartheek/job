@@ -17,25 +17,36 @@ const BulkUploadPage = () => {
     const [progress, setProgress] = useState(0);
     const [results, setResults] = useState<BulkResultRow[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [processingMode, setProcessingMode] = useState<"browser" | "flask">("browser");
 
-    const processRows = async (rows: Record<string, string>[]) => {
+    // ── Threshold: above this, use Flask (Python) instead of browser JS ──
+    const FLASK_THRESHOLD = 500;  // rows
+    const MAX_ROWS = 20000; // hard cap
+
+    // Yield control back to the browser between chunks so it never freezes
+    const yieldToUI = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    // Normalise a raw CSV/Excel row into a JobInput-shaped object
+    const toJob = (row: Record<string, string>) => ({
+        title: row.title || row.job_title || row["Job Title"] || row["job title"] || "",
+        company: row.company || row.Company || row["Company Name"] || row.employer || "",
+        location: row.location || row.Location || row.city || "",
+        salary: row.salary || row.Salary || row.compensation || row.pay || "",
+        description: row.description || row.Description || row.desc || row.text || "",
+        requirements: row.requirements || row.Requirements || row.qualifications || "",
+    });
+
+    // ── SMALL FILES: process in browser (< FLASK_THRESHOLD rows) ──────────
+    const processBrowser = async (rows: Record<string, string>[]) => {
+        setProcessingMode("browser");
         setIsProcessing(true);
         setProgress(0);
         setError(null);
         const processed: BulkResultRow[] = [];
+        const CHUNK = 10;
 
         for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            // Map common column names (case-insensitive)
-            const job = {
-                title: row.title || row.job_title || row["Job Title"] || row["job title"] || "",
-                company: row.company || row.Company || row["Company Name"] || row.employer || "",
-                location: row.location || row.Location || row.city || "",
-                salary: row.salary || row.Salary || row.compensation || row.pay || "",
-                description: row.description || row.Description || row.desc || row.text || "",
-                requirements: row.requirements || row.Requirements || row.qualifications || "",
-            };
-
+            const job = toJob(rows[i]);
             const scores = analyzeJob(job);
             processed.push({
                 id: i + 1,
@@ -51,16 +62,90 @@ const BulkUploadPage = () => {
                 factors: scores.factors,
                 llmExplanation: scores.llmExplanation,
             });
-
-            setProgress(Math.round(((i + 1) / rows.length) * 100));
-            // Tiny delay to let progress re-render
-            if (i % 5 === 0) await new Promise((r) => setTimeout(r, 1));
+            if ((i + 1) % CHUNK === 0 || i === rows.length - 1) {
+                setProgress(Math.round(((i + 1) / rows.length) * 100));
+                await yieldToUI();
+            }
         }
-
         setResults(processed);
         setIsProcessing(false);
         toast.success(`Analyzed ${processed.length} job postings!`);
     };
+
+    // ── LARGE FILES: send to Flask backend (≥ FLASK_THRESHOLD rows) ────────
+    const processFlask = async (rows: Record<string, string>[]) => {
+        setProcessingMode("flask");
+        setIsProcessing(true);
+        setProgress(0);
+        setError(null);
+
+        try {
+            const jobs = rows.map(toJob);
+            // Send in batches of 2000 so the request payload stays manageable
+            const BATCH = 2000;
+            const allResults: BulkResultRow[] = [];
+
+            for (let start = 0; start < jobs.length; start += BATCH) {
+                const batch = jobs.slice(start, start + BATCH);
+                const res = await fetch("/api/analyze-bulk", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ jobs: batch }),
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || `Server error ${res.status}`);
+                }
+
+                const data = await res.json();
+                for (const r of data.results) {
+                    allResults.push({
+                        id: start + r.id,
+                        title: r.title,
+                        company: r.company,
+                        location: r.location || "",
+                        salary: r.salary || "",
+                        textScore: r.textScore ?? 0,
+                        metadataScore: r.metadataScore ?? 0,
+                        anomalyScore: r.anomalyScore ?? 0,
+                        finalScore: r.finalScore,
+                        riskLevel: r.riskLevel,
+                        factors: r.factors || [],
+                        llmExplanation: r.llmExplanation || "",
+                    });
+                }
+                setProgress(Math.round(((start + batch.length) / jobs.length) * 100));
+            }
+
+            setResults(allResults);
+            setIsProcessing(false);
+            toast.success(`Flask analyzed ${allResults.length} job postings!`);
+
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            // Graceful fallback to browser mode if Flask is offline
+            if (msg.includes("fetch") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+                toast.error("Flask backend offline — falling back to browser mode (may be slow)");
+                setIsProcessing(false);
+                await processBrowser(rows);
+            } else {
+                setError(`Flask error: ${msg}`);
+                setIsProcessing(false);
+            }
+        }
+    };
+
+    // ── Auto-router: pick the right processor based on row count ──────────
+    const processRows = (rows: Record<string, string>[]) => {
+        if (rows.length >= FLASK_THRESHOLD) {
+            processFlask(rows);
+        } else {
+            processBrowser(rows);
+        }
+    };
+
+    const MAX_ROWS = 20000;
 
     const parseFile = async (f: File) => {
         const ext = f.name.split(".").pop()?.toLowerCase();
@@ -69,7 +154,15 @@ const BulkUploadPage = () => {
             Papa.parse(f, {
                 header: true,
                 skipEmptyLines: true,
-                complete: (res) => processRows(res.data as Record<string, string>[]),
+                complete: (res) => {
+                    const rows = res.data as Record<string, string>[];
+                    if (rows.length > MAX_ROWS) {
+                        setError(`File has ${rows.length.toLocaleString()} rows. Browser limit is ${MAX_ROWS.toLocaleString()}. For large datasets use: python python_models/run_dataset.py your_file.csv`);
+                        setIsProcessing(false);
+                        return;
+                    }
+                    processRows(rows);
+                },
                 error: () => {
                     setError("Failed to parse CSV file. Ensure it has column headers.");
                     setIsProcessing(false);
@@ -80,6 +173,11 @@ const BulkUploadPage = () => {
             const wb = XLSX.read(buffer, { type: "array" });
             const ws = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
+            if (rows.length > MAX_ROWS) {
+                setError(`File has ${rows.length.toLocaleString()} rows. Browser limit is ${MAX_ROWS.toLocaleString()}. For large datasets use: python python_models/run_dataset.py your_file.csv`);
+                setIsProcessing(false);
+                return;
+            }
             processRows(rows);
         } else {
             setError("Unsupported file type. Please upload a .csv, .xlsx, .xls, or .txt file.");
@@ -135,8 +233,8 @@ const BulkUploadPage = () => {
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={onDrop}
                 className={`relative rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-200 ${isDragging
-                        ? "border-red-500 bg-red-950/20"
-                        : "border-red-900/40 bg-black hover:border-red-700/60 hover:bg-red-950/10"
+                    ? "border-red-500 bg-red-950/20"
+                    : "border-red-900/40 bg-black hover:border-red-700/60 hover:bg-red-950/10"
                     }`}
             >
                 <input
@@ -179,15 +277,24 @@ const BulkUploadPage = () => {
                         <p className="text-white font-semibold">
                             Running AI pipeline on {file?.name}… {progress}%
                         </p>
+                        <span className={`ml-auto px-2 py-0.5 rounded text-xs font-bold ${processingMode === "flask"
+                                ? "bg-blue-900/50 text-blue-300"
+                                : "bg-gray-800 text-gray-400"
+                            }`}>
+                            {processingMode === "flask" ? "🐍 Flask Mode" : "💻 Browser Mode"}
+                        </span>
                     </div>
                     <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-red-600 transition-all duration-300 ease-out"
+                            className={`h-full transition-all duration-300 ease-out ${processingMode === "flask" ? "bg-blue-500" : "bg-red-600"
+                                }`}
                             style={{ width: `${progress}%` }}
                         />
                     </div>
                     <p className="text-xs text-gray-500">
-                        RoBERTa → Metadata NN → Isolation Forest → LLM Explanation…
+                        {processingMode === "flask"
+                            ? "🐍 Python server processing — fast, no browser lag…"
+                            : "RoBERTa → Metadata NN → Isolation Forest → LLM Explanation…"}
                     </p>
                 </div>
             )}

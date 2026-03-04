@@ -36,11 +36,47 @@ CORS(app, resources={r"/api/*": {"origins": ["http://localhost:8080", "http://lo
 
 @app.route('/api/health', methods=['GET'])
 def health():
+    """
+    GET /api/health
+    Tests all 4 models with a dummy job and reports per-model status.
+    """
+    dummy_job = {
+        "title":       "Software Engineer",
+        "company":     "Test Corp",
+        "location":    "New York, USA",
+        "salary":      "$80,000/year",
+        "description": "We are looking for a skilled software engineer.",
+        "requirements": "Python, JavaScript, 3 years experience.",
+        "email":       "hr@testcorp.com"
+    }
+
+    model_status = {}
+    all_ok = True
+
+    for name, fn in [
+        ("text",     run_text_model),
+        ("anomaly",  run_anomaly_model),
+        ("metadata", run_metadata_model),
+        ("content",  run_content_model),
+    ]:
+        try:
+            result = fn(dummy_job)
+            model_status[name] = {
+                "status": "ok",
+                "score":  result.score
+            }
+        except Exception as e:
+            model_status[name] = {
+                "status": "error",
+                "error":  str(e)
+            }
+            all_ok = False
+
     return jsonify({
-        "status": "ok",
-        "models": ["text", "anomaly", "metadata", "content"],
-        "version": "1.0.0"
-    })
+        "status":  "ok" if all_ok else "degraded",
+        "version": "1.0.0",
+        "models":  model_status
+    }), (200 if all_ok else 500)
 
 
 # ============================================================
@@ -161,6 +197,120 @@ def analyze():
 
     except Exception as e:
         return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
+
+
+# ============================================================
+# BULK ANALYSIS ENDPOINT — for large datasets (up to 20,000 rows)
+# ============================================================
+
+@app.route('/api/analyze-bulk', methods=['POST'])
+def analyze_bulk():
+    """
+    POST /api/analyze-bulk
+
+    Request body (JSON):
+    {
+        "jobs": [
+            { "title": "...", "company": "...", "description": "...", ... },
+            ...
+        ]
+    }
+
+    Response (JSON):
+    {
+        "results": [
+            {
+                "id": 1,
+                "title": "...",
+                "company": "...",
+                "finalScore": 0-100,
+                "riskLevel": "LOW"|"MEDIUM"|"HIGH"|"CRITICAL",
+                "textScore": 0-100,
+                "anomalyScore": 0-100,
+                "metadataScore": 0-100,
+                "factors": [...],
+                "llmExplanation": "..."
+            },
+            ...
+        ],
+        "total": N,
+        "fraudCount": N,
+        "safeCount": N
+    }
+    """
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
+    data = request.get_json()
+    jobs = data.get("jobs", [])
+
+    if not jobs or not isinstance(jobs, list):
+        return jsonify({"error": "Request must have a 'jobs' array"}), 400
+
+    MAX_BULK = 20000
+    if len(jobs) > MAX_BULK:
+        return jsonify({"error": f"Too many rows. Max is {MAX_BULK}, got {len(jobs)}."}), 400
+
+    results = []
+    fraud_count = 0
+
+    for i, job in enumerate(jobs):
+        try:
+            content_result  = run_content_model(job)
+            metadata_result = run_metadata_model(job)
+            text_result     = run_text_model(job)
+            anomaly_result  = run_anomaly_model(job)
+
+            final_score = max(0, min(100, round(0.7 * content_result.score + 0.3 * metadata_result.score)))
+
+            if final_score < 25:   risk_level = "LOW"
+            elif final_score < 50: risk_level = "MEDIUM"
+            elif final_score < 75: risk_level = "HIGH"
+            else:                  risk_level = "CRITICAL"
+
+            is_fraud = final_score >= 50
+            if is_fraud:
+                fraud_count += 1
+
+            all_flags = list(dict.fromkeys(content_result.flags + metadata_result.flags))
+            llm_explanation = _generate_explanation(
+                job.get("title", "this position"),
+                job.get("company", "this company"),
+                risk_level, final_score,
+                content_result.score, metadata_result.score, all_flags
+            )
+
+            results.append({
+                "id":             i + 1,
+                "title":          job.get("title", f"Row {i+1}"),
+                "company":        job.get("company", "Unknown"),
+                "location":       job.get("location", ""),
+                "salary":         job.get("salary", ""),
+                "textScore":      text_result.score,
+                "anomalyScore":   anomaly_result.score,
+                "metadataScore":  metadata_result.score,
+                "finalScore":     final_score,
+                "riskLevel":      risk_level,
+                "factors":        all_flags,
+                "llmExplanation": llm_explanation,
+            })
+
+        except Exception as e:
+            results.append({
+                "id":       i + 1,
+                "title":    job.get("title", f"Row {i+1}"),
+                "company":  job.get("company", "Unknown"),
+                "error":    str(e),
+                "finalScore": 0,
+                "riskLevel":  "LOW",
+            })
+
+    return jsonify({
+        "results":     results,
+        "total":       len(results),
+        "fraudCount":  fraud_count,
+        "safeCount":   len(results) - fraud_count,
+    })
 
 
 # ============================================================
