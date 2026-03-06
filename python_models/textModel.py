@@ -1,105 +1,107 @@
 # ============================================================
-# MODEL 1: RoBERTa Text Analyzer (Python Version)
-# Detects suspicious language patterns in job text fields.
+# MODEL 1: RoBERTa Text Analyzer — REAL ML VERSION
+# Uses TF-IDF Vectorizer + Logistic Regression (scikit-learn)
+# Trained on synthetic data modelled on Kaggle EMSCAD dataset.
+#
 # Run standalone:  python python_models/textModel.py
+# NOTE: Run train_models.py first to generate text_model.pkl
 # ============================================================
 
+import os
 import re
-import json
+import sys
+import joblib
+import numpy as np
 from dataclasses import dataclass, field
 from typing import List
 
-FRAUD_KEYWORDS = [
-    "no experience required", "work from home", "earn from home",
-    "make money fast", "unlimited income", "easy money", "guaranteed income",
-    "processing fee", "registration fee", "send money", "wire transfer",
-    "bitcoin", "crypto payment", "mlm", "multi-level", "pyramid",
-    "immediate start", "urgent hiring", "no interview", "same day pay",
-    "whatsapp only", "telegram only", "gmail.com", "yahoo.com", "hotmail.com",
-    "be your own boss", "financial freedom", "passive income",
-    "no skills needed", "training provided free", "earn $", "per week guaranteed",
-    "uncapped earnings", "100% remote no interview",
-]
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "text_model.pkl")
 
-SAFE_KEYWORDS = [
-    "benefits", "health insurance", "401k", "pto", "paid time off",
-    "equity", "stock options", "competitive salary", "career growth",
-    "team", "collaboration", "agile", "sprint", "annual leave",
-    "performance review", "mentorship", "professional development",
-]
+# ---- Auto-train if model not found ----
+def _ensure_model():
+    if not os.path.exists(MODEL_PATH):
+        print("  [textModel] Model not found. Running train_models.py automatically...")
+        import subprocess
+        train_script = os.path.join(os.path.dirname(__file__), "train_models.py")
+        subprocess.run([sys.executable, train_script], check=True)
+
+_ensure_model()
+_pipeline = joblib.load(MODEL_PATH)
 
 
 @dataclass
 class TextModelResult:
     score: int
     flags: List[str]
-    model_name: str = "RoBERTa Text Analyzer"
+    model_name: str = "RoBERTa Text Analyzer (ML)"
+    fraud_probability: float = 0.0
     fraud_keywords_hit: List[str] = field(default_factory=list)
     safe_keywords_hit: int = 0
 
 
 def run_text_model(job: dict) -> TextModelResult:
     """
-    RoBERTa Text Analyzer — Model 1
-    Analyzes job title, description, requirements, and company name
-    for suspicious language patterns.
+    RoBERTa Text Analyzer — Model 1 (Real ML Version)
+    Uses TF-IDF + Logistic Regression trained on EMSCAD-style data.
 
     Args:
         job: dict with keys: title, description, requirements, company
 
     Returns:
-        TextModelResult with score (0–100) and list of flags
+        TextModelResult with score (0-100) and flags
     """
     text = " ".join(filter(None, [
         job.get("title", ""),
         job.get("description", ""),
         job.get("requirements", ""),
         job.get("company", ""),
-    ])).lower()
+    ]))
 
+    # Get fraud probability from ML model
+    proba = _pipeline.predict_proba([text])[0]  # [legit_prob, fraud_prob]
+    fraud_prob = float(proba[1])
+    score = int(round(fraud_prob * 100))
+
+    # Secondary signals for flags (rule-based flags on top of ML score)
+    flags = []
     fraud_keywords_hit = []
-    score = 0
 
-    # Fraud keyword hits (+12 each)
-    for kw in FRAUD_KEYWORDS:
-        if kw in text:
-            score += 12
-            fraud_keywords_hit.append(kw)
+    text_lower = text.lower()
+    flag_phrases = [
+        "no experience required", "work from home", "earn from home",
+        "make money fast", "unlimited income", "guaranteed income",
+        "processing fee", "registration fee", "send money", "wire transfer",
+        "whatsapp only", "telegram only", "same day pay",
+        "no interview", "uncapped earnings", "passive income",
+    ]
+    for phrase in flag_phrases:
+        if phrase in text_lower:
+            fraud_keywords_hit.append(phrase)
+            flags.append(f'Suspicious phrase detected: "{phrase}"')
 
-    # Safe keyword hits (-3 each)
-    safe_hits = sum(1 for kw in SAFE_KEYWORDS if kw in text)
-    score -= safe_hits * 3
+    desc = job.get("description", "")
+    if len(desc) < 100:
+        flags.append("Job description is suspiciously short or vague")
 
-    # Short description = vague/suspicious (+20)
-    desc_length = len(job.get("description", ""))
-    if desc_length < 100:
-        score += 20
-    elif desc_length > 600:
-        score -= 5  # detailed = more legitimate
+    caps_count = len(re.findall(r'[A-Z]{4,}', desc + job.get("title", "")))
+    if caps_count > 3:
+        flags.append("Excessive capitalization detected (common in scam postings)")
 
-    # Excessive capitalization (+8)
-    excess_caps = len(re.findall(r'[A-Z]{4,}', job.get("description", "") + job.get("title", "")))
-    if excess_caps > 3:
-        score += 8
-
-    score = max(0, min(100, score))
-
-    flags = (
-        [f'Suspicious phrase detected: "{kw}"' for kw in fraud_keywords_hit] +
-        (["Job description is suspiciously short or vague"] if desc_length < 100 else []) +
-        (["Excessive capitalization detected (common in scam postings)"] if excess_caps > 3 else [])
-    )
+    safe_phrases = ["health insurance", "401k", "paid time off", "career growth",
+                    "equity", "mentorship", "competitive salary", "agile", "sprint"]
+    safe_hits = sum(1 for p in safe_phrases if p in text_lower)
 
     return TextModelResult(
-        score=score,
+        score=min(100, max(0, score)),
         flags=flags,
+        fraud_probability=round(fraud_prob, 4),
         fraud_keywords_hit=fraud_keywords_hit,
         safe_keywords_hit=safe_hits,
     )
 
 
 # ============================================================
-# STANDALONE RUNNER — run directly: python textModel.py
+# STANDALONE RUNNER
 # ============================================================
 
 if __name__ == "__main__":
@@ -109,7 +111,7 @@ if __name__ == "__main__":
             "job": {
                 "title": "Data Entry Agent",
                 "company": "XYZ Corp",
-                "description": "No experience required. Work from home. Earn $ 5000 per week guaranteed. Unlimited income. Same day pay. Whatsapp only for contact. No interview needed. Send money for training materials.",
+                "description": "No experience required. Work from home. Earn $5000 per week guaranteed. Unlimited income. Same day pay. Whatsapp only for contact. No interview needed. Send money for training materials.",
                 "requirements": "No skills needed. Training provided free.",
             },
         },
@@ -118,9 +120,7 @@ if __name__ == "__main__":
             "job": {
                 "title": "Senior Software Engineer",
                 "company": "Google LLC",
-                "location": "Bangalore, India",
-                "salary": "$120,000/year",
-                "description": "We are looking for an experienced software engineer to join our collaborative team. We offer competitive salary, health insurance, 401k, equity, stock options, paid time off, mentorship, and career growth. Annual leave and performance reviews included. Agile environment with sprint-based development.",
+                "description": "We are looking for an experienced software engineer to join our collaborative team. We offer competitive salary, health insurance, 401k, equity, stock options, paid time off, mentorship, and career growth. Agile environment with sprint-based development.",
                 "requirements": "5+ years in Python, TypeScript. Strong team collaboration skills.",
             },
         },
@@ -129,7 +129,6 @@ if __name__ == "__main__":
             "job": {
                 "title": "Sales Executive",
                 "company": "FastGrow",
-                "location": "Remote",
                 "description": "Immediate start required. Urgent hiring. Be your own boss. Financial freedom. Work from home. No interview process.",
                 "requirements": "No experience required.",
             },
@@ -137,26 +136,23 @@ if __name__ == "__main__":
     ]
 
     print("\n" + "=" * 60)
-    print("   RoBERTa Text Analyzer — Python Standalone Runner")
+    print("   RoBERTa Text Analyzer — Real ML Standalone Runner")
+    print("   (TF-IDF + Logistic Regression | scikit-learn)")
     print("=" * 60 + "\n")
 
     for case in test_cases:
         result = run_text_model(case["job"])
         print(f"{case['label']}")
-        print(f"  Model    : {result.model_name}")
-        print(f"  Score    : {result.score}/100")
-        print(f"  Safe hits: {result.safe_keywords_hit} safe keywords found")
-
-        if result.fraud_keywords_hit:
-            print(f"  Fraud kw : {', '.join(result.fraud_keywords_hit)}")
-
+        print(f"  Model       : {result.model_name}")
+        print(f"  Score       : {result.score}/100")
+        print(f"  Fraud Prob  : {result.fraud_probability * 100:.1f}%")
+        print(f"  Safe hits   : {result.safe_keywords_hit}")
         if result.flags:
             print("  ⚠️  Flags:")
             for f in result.flags:
                 print(f"      • {f}")
         else:
             print("  ✅ No fraud flags detected")
-
         print("-" * 60 + "\n")
 
-    print("✅ textModel.py ran successfully.\n")
+    print("✅ textModel.py (ML) ran successfully.\n")
