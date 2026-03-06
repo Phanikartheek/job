@@ -349,11 +349,14 @@ def _generate_explanation(title, company, risk, final, content, metadata, flags)
 # ============================================================
 
 if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5000))
     print("\n" + "=" * 60)
     print("   Job Fraud Detection — Flask API Server")
     print("=" * 60)
+    print(f"  Running on port: {port}")
     print("  Endpoints:")
-    print("    GET  http://localhost:5000/api/health")
-    print("    POST http://localhost:5000/api/analyze")
+    print(f"    GET  http://0.0.0.0:{port}/api/health")
+    print(f"    POST http://0.0.0.0:{port}/api/analyze")
     print("=" * 60 + "\n")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
