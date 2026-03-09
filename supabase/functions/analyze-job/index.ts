@@ -30,15 +30,15 @@ serve(async (req) => {
 
   try {
     const { type, content, fileType, jobData, fileName, mimeType } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
     let prompt = "";
     let messages: any[] = [];
-    
+
     // Determine actual file category
     const actualFileType = type === "file" ? getFileCategory(mimeType || "", fileName) : "manual";
 
@@ -114,7 +114,7 @@ Respond with a JSON object in this exact format:
         // CSV/Excel content - typically bulk job listings
         const base64Data = content.split(",")[1] || content;
         let textContent = "";
-        
+
         try {
           textContent = atob(base64Data);
         } catch {
@@ -138,7 +138,7 @@ If multiple jobs are listed, focus on common patterns. Identify which entries lo
         // PDF, DOC, TXT - text documents
         const base64Data = content.split(",")[1] || content;
         let textContent = "";
-        
+
         try {
           textContent = atob(base64Data);
           // Clean up binary artifacts from PDFs
@@ -194,11 +194,11 @@ Respond with a JSON object in this exact format:
     }
 
     console.log("Sending request to AI gateway...");
-    
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -210,7 +210,7 @@ Respond with a JSON object in this exact format:
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
@@ -223,13 +223,13 @@ Respond with a JSON object in this exact format:
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content;
-    
+
     console.log("AI response received, length:", aiResponse?.length);
 
     // Parse the JSON response from AI
@@ -246,12 +246,12 @@ Respond with a JSON object in this exact format:
         isFake: false,
         confidence: 70,
         factors: ["Analysis completed but response format was unexpected. Manual review recommended."],
-        extractedData: type === "file" ? { 
-          title: null, 
-          company: null, 
-          location: null, 
-          salary: null, 
-          description: "Unable to extract details. Please try manual entry." 
+        extractedData: type === "file" ? {
+          title: null,
+          company: null,
+          location: null,
+          salary: null,
+          description: "Unable to extract details. Please try manual entry."
         } : undefined
       };
     }
