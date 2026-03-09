@@ -185,10 +185,10 @@ add_page_break(doc)
 add_heading(doc, "ABSTRACT", 1)
 doc.add_paragraph()
 add_body(doc, "The increasing use of online job portals has also increased the number of fake job postings that cheat job seekers. These fraudulent listings may cause financial loss, personal data theft, and other problems. This project proposes an AI-based Job Fraud Detection System that helps identify whether a job posting is real or fake.")
-add_body(doc, "The system analyzes job postings using machine learning techniques. It examines the job description text, job details, and unusual patterns in the data to detect possible fraud. Multiple machine learning models are used to analyze different aspects of the job posting, and their results are combined to produce a final fraud score.")
+add_body(doc, "The system analyzes job postings using machine learning techniques. It examines the job description text, job details, and unusual patterns in the data to detect possible fraud. Four machine learning models are used: a Text Analyzer (TF-IDF + Logistic Regression), an Anomaly Detector (Isolation Forest), a Metadata Classifier (Random Forest), and an XGBoost Stacking Ensemble that combines the outputs of all three models for improved accuracy.")
 add_body(doc, "Based on the score, the system classifies job postings into different risk levels such as Low, Medium, High, or Critical. The application allows users to check a single job posting or upload multiple job listings using a CSV file for bulk analysis. The results also include simple explanations and downloadable reports.")
 add_body(doc, "The system is implemented as a web application with a frontend for the user interface and a backend server to handle the analysis, with a database used to store the analysis results. This project demonstrates how machine learning can be used to build a practical solution that helps protect job seekers from online job scams.")
-add_body(doc, "Keywords: Job Fraud Detection, Machine Learning, Text Analysis, Anomaly Detection, Ensemble Learning, Risk Classification.")
+add_body(doc, "Keywords: Job Fraud Detection, Machine Learning, XGBoost, Text Analysis, Anomaly Detection, Ensemble Learning, Risk Classification.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TABLE OF CONTENTS
@@ -391,7 +391,7 @@ add_heading(doc, "3.3 Module Descriptions", 2, WD_ALIGN_PARAGRAPH.LEFT)
 modules = [
     ("Frontend Module", "Built with React 18 and Vite. Provides four pages: Home (landing/marketing), Analyze (single job input form), Bulk Upload (CSV file upload and batch result table), and Dashboard (result history and statistics). Styled with Tailwind CSS."),
     ("Backend API Module", "Built with Python Flask. Exposes three REST endpoints: GET /api/health for model status verification, POST /api/analyze for single job fraud analysis, and POST /api/analyze-bulk for processing multiple jobs from a CSV upload."),
-    ("ML Model Layer", "Comprises four Python model files: textModel.py (TF-IDF + Logistic Regression), anomalyModel.py (Isolation Forest), metadataModel.py (Random Forest), and contentModel.py (weighted fusion). Each model is independently executable and saved as a serialized .pkl file."),
+    ("ML Model Layer", "Comprises five model components: textModel (TF-IDF + Logistic Regression), anomalyModel (Isolation Forest), metadataModel (Random Forest), xgboostModel (XGBoost Stacking Ensemble), and contentModel (weighted fusion). Each model is independently executable and saved as a serialized .pkl file."),
     ("Database Module", "Uses Supabase (hosted PostgreSQL) for storing analysis history, user sessions, and bulk analysis results. Connected through the Supabase JavaScript client library."),
 ]
 for name, desc in modules:
@@ -409,15 +409,15 @@ for name, desc in modules:
 # ─────────────────────────────────────────────────────────────────────────────
 add_page_break(doc)
 add_heading(doc, "CHAPTER 4: MACHINE LEARNING MODELS", 1, WD_ALIGN_PARAGRAPH.LEFT)
-add_body(doc, "The fraud detection pipeline consists of four machine learning models working in a cascade ensemble architecture. The first three models independently analyse different aspects of a job posting—text content, structural anomalies, and metadata—while the fourth model fuses their outputs into a single fraud score.")
+add_body(doc, "The fraud detection pipeline consists of five machine learning components working in a stacking ensemble architecture. The first three models independently analyse different aspects of a job posting—text content, structural anomalies, and metadata. Model 4 (XGBoost Stacking Ensemble) takes the output scores of Models 1–3 as input and produces a refined combined score using Gradient Boosting. Model 5 (Content Fusion) combines Model 1 and Model 2 into a content score, and the final fraud score is computed by weighting Content, Metadata, and XGBoost scores.")
 
 add_heading(doc, "Figure 4.1: ML Pipeline Overview", 3, WD_ALIGN_PARAGRAPH.CENTER)
 pipeline = [
-    " Model 1 (Text Analyzer) ─────┐",
-    "                               ├──► Model 4 (Content Fusion) ──► FINAL SCORE",
-    " Model 2 (Anomaly Detector) ──┘                     ▲",
-    "                                                     │",
-    " Model 3 (Metadata Classifier) ─────────────────────┘",
+    " Model 1 (Text Analyzer) ─────────┐",
+    "                                   ├──► Model 4 (XGBoost Ensemble) ──┐",
+    " Model 2 (Anomaly Detector) ───────┤                                  ├──► FINAL SCORE",
+    "                                   └──► Model 5 (Content Fusion) ────┤",
+    " Model 3 (Metadata Classifier) ──────────────────────────────────────┘",
 ]
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -536,7 +536,38 @@ run = p.add_run("\n".join(meta_flow))
 run.font.name = "Courier New"
 run.font.size = Pt(10)
 
-add_heading(doc, "4.4 Model 4 – Content Fusion Model", 2, WD_ALIGN_PARAGRAPH.LEFT)
+add_heading(doc, "4.4 Model 4 – XGBoost Stacking Ensemble", 2, WD_ALIGN_PARAGRAPH.LEFT)
+add_body(doc, "Model 4 is an XGBoost (Extreme Gradient Boosting) classifier that acts as the stacking layer of the ensemble. Instead of analysing raw job text directly, it takes the fraud probability scores produced by Models 1, 2, and 3 as its three input features and learns how to best combine them for maximum discrimination between fraud and legitimate postings.")
+add_body(doc, "XGBoost builds an ensemble of decision trees in sequence, where each successive tree corrects the errors of the previous one. This gradient boosting strategy is widely used in industry and Kaggle competitions for its high accuracy and resistance to overfitting. In this system, XGBoost serves as a meta-learner that captures non-linear relationships between the three model scores.")
+
+add_heading(doc, "Features Used (Model Stacking):", 3, WD_ALIGN_PARAGRAPH.LEFT)
+for feat in [
+    "text_score (normalised 0–1) — output of Model 1 (Text Analyzer)",
+    "anomaly_score (normalised 0–1) — output of Model 2 (Anomaly Detector)",
+    "metadata_score (normalised 0–1) — output of Model 3 (Metadata Classifier)",
+]:
+    add_bullet(doc, feat)
+
+add_heading(doc, "Figure 4.5: XGBoost Workflow", 3, WD_ALIGN_PARAGRAPH.CENTER)
+xgb_flow = [
+    " Inputs: [text_score, anomaly_score, metadata_score]",
+    "      │",
+    "      ▼",
+    " XGBClassifier (200 trees, depth=4, lr=0.1)",
+    "      │   Gradient boosting: each tree corrects previous errors",
+    "      ▼",
+    " Fraud Probability (0.0 – 1.0)",
+    "      │",
+    "      ▼",
+    " XGBoost Score (0 – 100)",
+]
+p = doc.add_paragraph()
+p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = p.add_run("\n".join(xgb_flow))
+run.font.name = "Courier New"
+run.font.size = Pt(10)
+
+add_heading(doc, "4.5 Model 5 – Content Fusion Model", 2, WD_ALIGN_PARAGRAPH.LEFT)
 add_body(doc, "The Content Fusion Model combines the outputs of Model 1 (Text Analyzer) and Model 2 (Anomaly Detector) into a single Content Score using a weighted average. Text analysis is assigned a higher weight (75%) because it captures a wider variety of fraud language patterns, while the anomaly score (25%) adds structural context.")
 
 p = doc.add_paragraph()
@@ -544,12 +575,12 @@ p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 run = p.add_run("Content Score  =  (Text Score × 0.75)  +  (Anomaly Score × 0.25)")
 set_font(run, 12, bold=True)
 
-add_heading(doc, "4.5 Final Score Calculation", 2, WD_ALIGN_PARAGRAPH.LEFT)
-add_body(doc, "The final fraud score is computed by combining the Content Score (from Model 4) with the Metadata Score (from Model 3) using a weighted average:")
+add_heading(doc, "4.6 Final Score Calculation", 2, WD_ALIGN_PARAGRAPH.LEFT)
+add_body(doc, "The final fraud score is computed by combining the Content Score (Model 5), Metadata Score (Model 3), and XGBoost Score (Model 4) using a weighted average:")
 
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-run = p.add_run("Final Score  =  (Content Score × 0.70)  +  (Metadata Score × 0.30)")
+run = p.add_run("Final Score  =  (Content Score × 0.40)  +  (Metadata Score × 0.30)  +  (XGBoost Score × 0.30)")
 set_font(run, 12, bold=True)
 
 add_body(doc, "The resulting score is mapped to one of four risk levels:")
