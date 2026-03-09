@@ -132,8 +132,8 @@ add_centered(doc, "Roll No: 228T1A42B3", 12, False, 0, 12)
 add_centered(doc, "Under the Guidance of", 12, False, 12, 8)
 add_centered(doc, "Dr. / Mr. / Ms. [Guide Name]", 14, True, 0, 4)
 add_centered(doc, "Assistant Professor, Dept. of CSE", 12, False, 0, 36)
-add_centered(doc, "[INSTITUTION NAME]", 14, True, 24, 6)
-add_centered(doc, "[City, State] – [PIN]", 12, False, 0, 6)
+add_centered(doc, "DHANEKULA INSTITUTE OF ENGINEERING AND TECHNOLOGY", 14, True, 24, 6)
+add_centered(doc, "Vijayawada, Andhra Pradesh – 521139", 12, False, 0, 6)
 add_centered(doc, "Academic Year: 2025–2026", 12, True, 6, 0)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ doc.add_paragraph()
 doc.add_paragraph()
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-run = p.add_run("[Guide Name]\nAssistant Professor\nDepartment of CSE\n[Institution Name]\nDate: ____________")
+run = p.add_run("[Guide Name]\nAssistant Professor\nDepartment of CSE\nDhanekula Institute of Engineering and Technology\nDate: ____________")
 set_font(run, 12)
 
 # ─────────────────────────────────────────────────────────────────────────────
