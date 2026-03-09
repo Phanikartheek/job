@@ -1,10 +1,10 @@
 # ============================================================
 # Flask API Backend — Job Fraud Detection
-# Serves the 4 Python ML models via REST endpoints.
+# Serves the 5 ML models via REST endpoints (Text + Anomaly + Metadata + XGBoost + Fusion).
 #
 # Endpoints:
 #   GET  /api/health    — health check
-#   POST /api/analyze   — run all 4 models and return result
+#   POST /api/analyze   — run all models and return result
 #
 # Run: python flask_backend/app.py
 # Or:  cd flask_backend && python app.py
@@ -19,10 +19,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python_models'
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from textModel     import run_text_model
-from anomalyModel  import run_anomaly_model
-from metadataModel import run_metadata_model
-from contentModel  import run_content_model
+from textModel      import run_text_model
+from anomalyModel   import run_anomaly_model
+from metadataModel  import run_metadata_model
+from contentModel   import run_content_model
+from xgboostModel   import run_xgboost_model
 
 app = Flask(__name__)
 
@@ -53,14 +54,22 @@ def health():
     model_status = {}
     all_ok = True
 
-    for name, fn in [
-        ("text",     run_text_model),
-        ("anomaly",  run_anomaly_model),
-        ("metadata", run_metadata_model),
-        ("content",  run_content_model),
+    for name, fn, extra in [
+        ("text",     lambda j: run_text_model(j),     None),
+        ("anomaly",  lambda j: run_anomaly_model(j),  None),
+        ("metadata", lambda j: run_metadata_model(j), None),
+        ("content",  lambda j: run_content_model(j),  None),
+        ("xgboost",  None,                            None),
     ]:
         try:
-            result = fn(dummy_job)
+            if name == "xgboost":
+                # XGBoost needs scores from the other models
+                t  = run_text_model(dummy_job)
+                a  = run_anomaly_model(dummy_job)
+                m  = run_metadata_model(dummy_job)
+                result = run_xgboost_model(t.score, a.score, m.score)
+            else:
+                result = fn(dummy_job)
             model_status[name] = {
                 "status": "ok",
                 "score":  result.score
@@ -125,14 +134,21 @@ def analyze():
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
 
     try:
-        # Run all 4 models
-        text_result    = run_text_model(job)
-        anomaly_result = run_anomaly_model(job)
-        metadata_result= run_metadata_model(job)
-        content_result = run_content_model(job)   # fuses text + anomaly (75%/25%)
+        # Run all models
+        text_result     = run_text_model(job)
+        anomaly_result  = run_anomaly_model(job)
+        metadata_result = run_metadata_model(job)
+        content_result  = run_content_model(job)   # fuses text + anomaly (75%/25%)
+        xgboost_result  = run_xgboost_model(
+            text_result.score, anomaly_result.score, metadata_result.score
+        )
 
-        # Final score: 70% content + 30% metadata (mirrors TS mlEngine)
-        final_score = round(0.7 * content_result.score + 0.3 * metadata_result.score)
+        # Final score: 40% content + 30% metadata + 30% xgboost
+        final_score = round(
+            0.40 * content_result.score +
+            0.30 * metadata_result.score +
+            0.30 * xgboost_result.score
+        )
         final_score = max(0, min(100, final_score))
 
         # Risk level
@@ -148,8 +164,9 @@ def analyze():
         # Is flagged as fraud?
         is_fake = final_score >= 50
 
-        # Combine all flags (deduplicated)
-        all_flags = list(dict.fromkeys(content_result.flags + metadata_result.flags))
+        all_flags = list(dict.fromkeys(
+            content_result.flags + metadata_result.flags + xgboost_result.flags
+        ))
 
         # Human-readable explanation
         company = job.get("company", "this company")
@@ -168,6 +185,7 @@ def analyze():
             "anomalyScore":   anomaly_result.score,
             "metadataScore":  metadata_result.score,
             "contentScore":   content_result.score,
+            "xgboostScore":   xgboost_result.score,
             "finalScore":     final_score,
             "llmExplanation": llm_explanation,
             "modelDetails": {
@@ -191,6 +209,10 @@ def analyze():
                     "score":           content_result.score,
                     "textSubScore":    content_result.text_sub_score,
                     "anomalySubScore": content_result.anomaly_sub_score,
+                },
+                "xgboost": {
+                    "score":            xgboost_result.score,
+                    "fraudProbability": xgboost_result.fraud_probability,
                 }
             }
         })
@@ -260,8 +282,15 @@ def analyze_bulk():
             metadata_result = run_metadata_model(job)
             text_result     = run_text_model(job)
             anomaly_result  = run_anomaly_model(job)
+            xgboost_result  = run_xgboost_model(
+                text_result.score, anomaly_result.score, metadata_result.score
+            )
 
-            final_score = max(0, min(100, round(0.7 * content_result.score + 0.3 * metadata_result.score)))
+            final_score = max(0, min(100, round(
+                0.40 * content_result.score +
+                0.30 * metadata_result.score +
+                0.30 * xgboost_result.score
+            )))
 
             if final_score < 25:   risk_level = "LOW"
             elif final_score < 50: risk_level = "MEDIUM"

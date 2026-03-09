@@ -1,7 +1,7 @@
 # ============================================================
 # TRAIN ALL ML MODELS — Job Fraud Detection
 # Generates synthetic training data (modelled on Kaggle EMSCAD)
-# Trains 3 real scikit-learn models and saves as .pkl files.
+# Trains 4 ML models (Text, Anomaly, Metadata, XGBoost) as .pkl files.
 #
 # Run: python python_models/train_models.py
 # ============================================================
@@ -16,6 +16,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from xgboost import XGBClassifier
 
 # Directory to save trained models
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
@@ -252,6 +253,78 @@ def train_metadata_model():
 
 
 # ============================================================
+# 4. TRAIN XGBOOST MODEL — Stacking Ensemble
+# ============================================================
+
+def train_xgboost_model():
+    print("\n[4/4] Training XGBoost Stacking Ensemble...")
+
+    # Build stacked feature matrix:
+    # Each row = [text_score, anomaly_score, metadata_score] (normalised 0-1)
+    # Fraud rows: high text + anomaly scores, varied metadata
+    XGBOOST_FRAUD = np.array([
+        [0.92, 0.85, 0.78],
+        [0.88, 0.80, 0.90],
+        [0.75, 0.90, 0.70],
+        [0.95, 0.70, 0.85],
+        [0.80, 0.88, 0.92],
+        [0.70, 0.95, 0.75],
+        [0.85, 0.78, 0.88],
+        [0.90, 0.82, 0.80],
+        [0.78, 0.92, 0.86],
+        [0.94, 0.76, 0.91],
+        [0.72, 0.88, 0.79],
+        [0.87, 0.85, 0.83],
+        [0.91, 0.79, 0.77],
+    ], dtype=float)
+
+    # Legit rows: all low scores
+    XGBOOST_LEGIT = np.array([
+        [0.05, 0.10, 0.08],
+        [0.12, 0.08, 0.05],
+        [0.08, 0.15, 0.10],
+        [0.10, 0.06, 0.12],
+        [0.07, 0.12, 0.09],
+        [0.15, 0.05, 0.07],
+        [0.09, 0.11, 0.06],
+        [0.06, 0.14, 0.08],
+        [0.11, 0.07, 0.10],
+        [0.08, 0.09, 0.12],
+        [0.13, 0.08, 0.05],
+        [0.06, 0.10, 0.09],
+        [0.10, 0.07, 0.11],
+    ], dtype=float)
+
+    X = np.vstack([XGBOOST_FRAUD, XGBOOST_LEGIT])
+    y = [1] * len(XGBOOST_FRAUD) + [0] * len(XGBOOST_LEGIT)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    model = XGBClassifier(
+        n_estimators=200,
+        max_depth=4,
+        learning_rate=0.1,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        use_label_encoder=False,
+        eval_metric='logloss',
+        random_state=42,
+    )
+    model.fit(X_train, y_train)
+    preds = model.predict(X_test)
+
+    print("  XGBoost Model Training Report:")
+    print(classification_report(y_test, preds, target_names=["Legitimate", "Fraud"], zero_division=0))
+
+    path = os.path.join(MODEL_DIR, "xgboost_model.pkl")
+    joblib.dump(model, path)
+    print(f"  ✅ Saved → {path}")
+    return model
+
+
+# ============================================================
 # MAIN
 # ============================================================
 
@@ -264,8 +337,9 @@ if __name__ == "__main__":
     train_text_model()
     train_anomaly_model()
     train_metadata_model()
+    train_xgboost_model()
 
     print("\n" + "=" * 60)
-    print("   ✅ All 3 ML models trained and saved successfully!")
+    print("   ✅ All 4 ML models trained and saved successfully!")
     print(f"   📁 Location: {MODEL_DIR}")
     print("=" * 60 + "\n")
