@@ -128,7 +128,7 @@ add_centered(doc, "on", 12, False, 0, 8)
 add_centered(doc, "AI-POWERED JOB FRAUD DETECTION SYSTEM", 16, True, 8, 16)
 add_centered(doc, "Submitted by", 12, False, 16, 8)
 add_centered(doc, "PHANI KARTHEEK", 14, True, 0, 4)
-add_centered(doc, "Roll No: [20XXXXXX]", 12, False, 0, 12)
+add_centered(doc, "Roll No: 228T1A42B3", 12, False, 0, 12)
 add_centered(doc, "Under the Guidance of", 12, False, 12, 8)
 add_centered(doc, "Dr. / Mr. / Ms. [Guide Name]", 14, True, 0, 4)
 add_centered(doc, "Assistant Professor, Dept. of CSE", 12, False, 0, 36)
@@ -148,8 +148,9 @@ doc.add_paragraph()
 doc.add_paragraph()
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-run = p.add_run("PHANI KARTHEEK\nRoll No: [20XXXXXX]\nDate: ____________")
+run = p.add_run("PHANI KARTHEEK\nRoll No: 228T1A42B3\nDate: ____________")
 set_font(run, 12)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CHAPTER 0C — CERTIFICATE
@@ -157,7 +158,7 @@ set_font(run, 12)
 add_page_break(doc)
 add_heading(doc, "CERTIFICATE BY THE GUIDE", 1)
 doc.add_paragraph()
-add_body(doc, "This is to certify that the project report entitled \u2018AI-Powered Job Fraud Detection System\u2019 submitted by PHANI KARTHEEK (Roll No: [20XXXXXX]) to the Department of Computer Science & Engineering in partial fulfillment of the requirements for the award of the degree of Bachelor of Technology is a record of bonafide project work carried out by him/her under my supervision and guidance.")
+add_body(doc, "This is to certify that the project report entitled \u2018AI-Powered Job Fraud Detection System\u2019 submitted by PHANI KARTHEEK (Roll No: 228T1A42B3) to the Department of Computer Science & Engineering in partial fulfillment of the requirements for the award of the degree of Bachelor of Technology is a record of bonafide project work carried out by him/her under my supervision and guidance.")
 add_body(doc, "The results embodied in this project report have not been submitted to any other university or institution for the award of any degree or diploma.")
 doc.add_paragraph()
 doc.add_paragraph()
@@ -183,11 +184,11 @@ add_body(doc, "I express my heartfelt gratitude to my family and friends for the
 add_page_break(doc)
 add_heading(doc, "ABSTRACT", 1)
 doc.add_paragraph()
-add_body(doc, "The rapid growth of online job portals has led to a significant rise in fraudulent job postings that deceive unsuspecting job seekers, resulting in financial losses, data theft, and psychological harm. This project presents an AI-Powered Job Fraud Detection System—a full-stack web application designed to automatically identify and flag fake job listings using a multi-model machine learning pipeline.")
-add_body(doc, "The system employs three trained machine learning models operating in tandem: (1) a Text Analyzer using TF-IDF Vectorization combined with Logistic Regression for natural language analysis of job descriptions, (2) an Anomaly Detector using Isolation Forest for structural anomaly identification, and (3) a Metadata Classifier using a Random Forest ensemble for analysing job metadata such as salary, email, and location. A fourth fusion model combines the outputs of these three models into a final fraud score ranging from 0 to 100, categorised into four risk levels: LOW, MEDIUM, HIGH, and CRITICAL.")
-add_body(doc, "The system provides both single-job real-time analysis and bulk CSV upload capabilities, supporting up to 20,000 job records per request. Users receive detailed fraud flags, human-readable explanations, and downloadable PDF reports for each analysis. The trained models demonstrated high discriminative accuracy, correctly identifying clear scams (scoring 81–94/100) while assigning very low scores (0–24/100) to legitimate postings.")
-add_body(doc, "The solution is deployed as a React-based web application communicating with a Flask REST API backend, backed by a Supabase PostgreSQL database for result storage. This project demonstrates the practical application of supervised and unsupervised machine learning techniques in solving a critical real-world problem, offering a scalable, accessible tool to protect job seekers from online recruitment fraud.")
-add_body(doc, "Keywords: Job Fraud Detection, Machine Learning, TF-IDF, Logistic Regression, Isolation Forest, Random Forest, Anomaly Detection, React, Flask.")
+add_body(doc, "The increasing use of online job portals has also increased the number of fake job postings that cheat job seekers. These fraudulent listings may cause financial loss, personal data theft, and other problems. This project proposes an AI-based Job Fraud Detection System that helps identify whether a job posting is real or fake.")
+add_body(doc, "The system analyzes job postings using machine learning techniques. It examines the job description text, job details, and unusual patterns in the data to detect possible fraud. Multiple machine learning models are used to analyze different aspects of the job posting, and their results are combined to produce a final fraud score.")
+add_body(doc, "Based on the score, the system classifies job postings into different risk levels such as Low, Medium, High, or Critical. The application allows users to check a single job posting or upload multiple job listings using a CSV file for bulk analysis. The results also include simple explanations and downloadable reports.")
+add_body(doc, "The system is implemented as a web application with a frontend for the user interface and a backend server to handle the analysis, with a database used to store the analysis results. This project demonstrates how machine learning can be used to build a practical solution that helps protect job seekers from online job scams.")
+add_body(doc, "Keywords: Job Fraud Detection, Machine Learning, Text Analysis, Anomaly Detection, Ensemble Learning, Risk Classification.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TABLE OF CONTENTS
