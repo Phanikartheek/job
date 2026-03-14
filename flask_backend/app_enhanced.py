@@ -24,7 +24,7 @@ def initialize_models():
     global models, continuous_learner
     
     try:
-        print("🔄 Initializing Enhanced ML Models...")
+        print("[...] Initializing Enhanced ML Models...")
         
         # Try to load models in order of preference
         model_variants = {
@@ -57,20 +57,20 @@ def initialize_models():
                     module = __import__(config['module'])
                     ModelClass = getattr(module, config['class'])
                     models[variant_name] = ModelClass()
-                    print(f"✅ Loaded {variant_name}")
+                    print(f"[OK] Loaded {variant_name}")
                 except Exception as e:
-                    print(f"⚠️  Could not load {variant_name}: {str(e)}")
+                    print(f"[!] Could not load {variant_name}: {str(e)}")
         
         # Initialize continuous learning
         if 'continuous_learning' in models:
             from continuousLearning import ContinuousLearningEngine
             continuous_learner = ContinuousLearningEngine("model.pkl")
-            print("✅ Continuous Learning Engine initialized")
+            print("[OK] Continuous Learning Engine initialized")
         
-        print("✅ All models initialized successfully\n")
+        print("[OK] All models initialized successfully\n")
         
     except Exception as e:
-        print(f"❌ Model initialization error: {str(e)}\n")
+        print(f"[ERROR] Model initialization error: {str(e)}\n")
 
 # Initialize models on startup
 initialize_models()
