@@ -4,10 +4,11 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "pip install -r requirements_enhanced.txt && python python_models/train_models.py"
-    startCommand: "gunicorn --chdir flask_backend app_enhanced:app --bind 0.0.0.0:$PORT --timeout 120"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn --chdir flask_backend app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
-      - key: PYTORCH_ENABLE_MPS_FALLBACK
-        value: "1"
+      - key: ENV
+        value: production
+

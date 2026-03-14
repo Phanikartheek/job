@@ -1,8 +1,13 @@
 {
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist",
     "rewrites": [
         {
             "source": "/api/:path*",
             "destination": "https://jobguard-api-qgxe.onrender.com/api/:path*"
         }
-    ]
+    ],
+    "env": {
+        "VITE_API_URL": "@vite_api_url"
+    }
 }
