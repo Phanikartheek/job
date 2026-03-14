@@ -1,33 +1,71 @@
-# Vercel ignore file - prevents Python from being detected as main language
-# This tells Vercel to treat this as a Node.js project, not Python
+# Ignore all Python-related files and directories
+# This forces Vercel to treat as Node.js project only
 
-# Python files/folders to ignore
-__pycache__
+# Python files
+*.py
 *.pyc
-.venv
+*.pyo
+*.pyd
+.Python
+python-env/
+
+# Python directories
+__pycache__/
+.venv/
+venv/
+ENV/
+env/
 .env
 .env.local
+.env.*.local
+
+# Project Python files  
+flask_backend/
+python_models/
 requirements.txt
 requirements_enhanced.txt
-flask_backend
-python_models
-venv
+setup.py
+setup.cfg
+pyproject.toml
 
 # Build artifacts
-dist
-build
-.next
-.cache
-node_modules
-.vite
+dist/
+build/
+*.egg-info/
+.pytest_cache/
 
-# Git
-.git
-.gitignore
-
-# IDE
-.vscode
-.idea
+# Development
+.vscode/
+.idea/
 *.swp
 *.swo
 .DS_Store
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Dependencies
+node_modules/
+.npm/
+
+# Cache and temp
+.cache/
+.vite/
+.next/
+temp/
+tmp/
+
+# IDE config
+*.code-workspace
+launch.json
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+
+# Documentation  
+docs/
+*.md

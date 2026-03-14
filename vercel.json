@@ -1,17 +1,31 @@
 {
-    "buildCommand": "npm install && npm run build",
+    "buildCommand": "npm run build 2>&1 || exit 1",
     "outputDirectory": "dist",
-    "installCommand": "npm install --legacy-peer-deps",
+    "installCommand": "npm install --legacy-peer-deps --no-optional 2>&1",
     "framework": "vite",
     "nodeVersion": "18.x",
+    "git": {
+        "deploymentEnabled": {
+            "main": true
+        }
+    },
     "rewrites": [
         {
             "source": "/api/:path*",
             "destination": "https://jobguard-api-qgxe.onrender.com/api/:path*"
         }
     ],
-    "env": {
-        "VITE_API_URL": "@vite_api_url"
-    }
+    "headers": [
+        {
+            "source": "/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=3600"
+                }
+            ]
+        }
+    ]
 }
+
 
