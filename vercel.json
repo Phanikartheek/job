@@ -3,7 +3,6 @@
     "outputDirectory": "dist",
     "installCommand": "npm install --legacy-peer-deps --no-optional 2>&1",
     "framework": "vite",
-    "nodeVersion": "18.x",
     "git": {
         "deploymentEnabled": {
             "main": true
