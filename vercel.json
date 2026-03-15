@@ -1,12 +1,15 @@
 {
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
-    "installCommand": "npm ci",
+    "installCommand": "npm ci --verbose",
     "framework": "vite",
     "git": {
         "deploymentEnabled": {
             "main": true
         }
+    },
+    "env": {
+        "NODE_OPTIONS": "--max-old-space-size=4096"
     },
     "rewrites": [
         {
