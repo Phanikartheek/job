@@ -130,12 +130,7 @@ def analyze_job():
         metadata_result = metadata_model(job)
         content_result = content_model(job)
         
-        # Normalize scores for XGBoost (0-1)
-        text_score = text_result.score / 100
-        anomaly_score = anomaly_result.score / 100
-        metadata_score = metadata_result.score / 100
-        
-        # Final XGBoost ensemble
+        # Final XGBoost ensemble — takes raw 0-100 scores from models 1-3
         xgboost_result = xgboost_model(
             text_score=text_result.score,
             anomaly_score=anomaly_result.score,
@@ -148,28 +143,77 @@ def analyze_job():
             (metadata_result.score * 0.30) +
             (xgboost_result.score * 0.30)
         )
+        final_score = max(0, min(100, final_score))
         
         # Determine risk level
         if final_score >= 75:
-            risk_level = 'HIGH'
+            risk_level = 'CRITICAL'
         elif final_score >= 50:
+            risk_level = 'HIGH'
+        elif final_score >= 25:
             risk_level = 'MEDIUM'
         else:
             risk_level = 'LOW'
         
-        # Collect all flags
-        all_flags = set()
-        all_flags.update(text_result.flags or [])
-        all_flags.update(anomaly_result.flags or [])
-        all_flags.update(metadata_result.flags or [])
+        # Collect all flags (using correct attribute names from Python dataclasses)
+        all_flags = []
+        all_flags.extend(text_result.flags or [])
+        all_flags.extend(anomaly_result.flags or [])
+        all_flags.extend(metadata_result.flags or [])
+        all_flags.extend(xgboost_result.flags or [])
         
+        # Generate LLM-style explanation
+        company = job.get('company') or 'this company'
+        title   = job.get('title')   or 'this position'
+        sep = '; '
+        if risk_level == 'LOW':
+            llm_explanation = (
+                'The job posting for "' + title + '" at ' + company + ' shows low fraud risk. '
+                'Content Model: ' + str(content_result.score) + '/100 \u00b7 Metadata NN: ' + str(metadata_result.score) + '/100 \u00b7 '
+                'XGBoost: ' + str(xgboost_result.score) + '/100 \u00b7 Final: ' + str(final_score) + '/100 \u2014 SAFE. '
+                'Verify company website before applying.'
+            )
+        elif risk_level == 'MEDIUM':
+            top_flag = all_flags[0] if all_flags else 'some ambiguous signals'
+            llm_explanation = (
+                'Moderate fraud risk for "' + title + '" at ' + company + '. Primary concern: ' + top_flag + '. '
+                'Content: ' + str(content_result.score) + '/100 \u00b7 Metadata: ' + str(metadata_result.score) + '/100 \u00b7 '
+                'Final: ' + str(final_score) + '/100. Verify employer identity before sharing personal information.'
+            )
+        elif risk_level == 'HIGH':
+            top_flags_str = sep.join(all_flags[:3])
+            llm_explanation = (
+                '\u26a0\ufe0f HIGH FRAUD RISK for "' + title + '" at ' + company + '. '
+                'Content: ' + str(content_result.score) + '/100 \u00b7 Metadata: ' + str(metadata_result.score) + '/100 \u00b7 '
+                'Final: ' + str(final_score) + '/100. '
+                'Red flags: ' + top_flags_str + '. Do NOT apply or send money.'
+            )
+        else:  # CRITICAL
+            top_flags_str = sep.join(all_flags[:4])
+            llm_explanation = (
+                '\U0001f6a8 CRITICAL FRAUD ALERT for "' + title + '" at ' + company + '. '
+                'Content: ' + str(content_result.score) + '/100 \u00b7 Metadata: ' + str(metadata_result.score) + '/100 \u00b7 '
+                'Final: ' + str(final_score) + '/100. '
+                'Indicators: ' + top_flags_str + '. Block and report the sender immediately.'
+            )
+        
+        # Return response with keys matching TypeScript mlEngine.ts expectations
         return jsonify({
-            'status': 'success',
-            'final_fraud_score': final_score,
-            'risk_level': risk_level,
-            'confidence': 'high',
-            'accuracy': '98%',
-            'model_tier': 'Tier 1',
+            # --- Keys required by mlEngine.ts analyzeJobViaFlask ---
+            'isFake':          final_score >= 50,
+            'confidence':      final_score,
+            'textScore':       text_result.score,
+            'anomalyScore':    anomaly_result.score,
+            'metadataScore':   metadata_result.score,
+            'contentScore':    content_result.score,
+            'finalScore':      final_score,
+            'riskLevel':       risk_level,
+            'factors':         all_flags,
+            'llmExplanation':  llm_explanation,
+            # --- Extra detail for debugging / UI breakdown ---
+            'status':          'success',
+            'accuracy':        '98%',
+            'model_tier':      'Tier 1',
             'breakdown': {
                 'text_analysis': {
                     'score': text_result.score,
@@ -180,26 +224,22 @@ def analyze_job():
                 'anomaly_detection': {
                     'score': anomaly_result.score,
                     'model': 'Isolation Forest',
-                    'anomalies_detected': anomaly_result.anomaly_indicators
+                    'anomalies_detected': anomaly_result.anomalies_found   # FIXED: was .anomaly_indicators
                 },
                 'metadata_analysis': {
                     'score': metadata_result.score,
                     'model': 'Random Forest',
-                    'issues': metadata_result.red_flags
+                    'issues': metadata_result.flags                         # FIXED: was .red_flags
                 },
                 'content_fusion': {
                     'score': content_result.score,
-                    'weights': {
-                        'text': 0.75,
-                        'anomaly': 0.25
-                    }
+                    'weights': {'text': 0.75, 'anomaly': 0.25}
                 },
                 'xgboost_ensemble': {
                     'score': xgboost_result.score,
                     'model': 'Gradient Boosting'
                 }
             },
-            'all_flags': list(all_flags),
             'recommendations': generate_recommendations(final_score, risk_level)
         })
         
@@ -332,10 +372,16 @@ def analyze_metadata():
 # ─────────────────────────────────────────────────────────────────────────────
 
 def generate_recommendations(final_score: int, risk_level: str) -> list:
-    """Generate actionable recommendations based on fraud score"""
+    """Generate actionable recommendations based on fraud score and risk level"""
     recommendations = []
     
-    if risk_level == 'HIGH':
+    if risk_level == 'CRITICAL':
+        recommendations.append("🚨 CRITICAL: Strong evidence of fraud — do NOT engage")
+        recommendations.append("❌ DO NOT share personal information or pay any fees")
+        recommendations.append("✓ Report this posting to the job platform immediately")
+        recommendations.append("✓ Warn others by flagging the listing")
+    
+    elif risk_level == 'HIGH':
         recommendations.append("⚠️ CAUTION: This job shows high fraud indicators")
         recommendations.append("❌ DO NOT apply without independent verification")
         recommendations.append("✓ Verify company legitimacy via official website")
@@ -456,25 +502,19 @@ def root():
 
 
 if __name__ == '__main__':
+    print("\n" + "="*60)
+    print("Job Fraud Detection API — Tier 1 ML Models")
+    print("="*60)
+    print("\nAvailable Endpoints:")
+    print("  POST  /api/analyze          → Full Tier 1 ensemble analysis")
+    print("  POST  /api/analyze-text     → Text-only TF-IDF analysis")
+    print("  POST  /api/analyze-anomaly  → Isolation Forest anomaly detection")
+    print("  POST  /api/analyze-metadata → Random Forest metadata analysis")
+    print("  POST  /api/compare-models   → Compare model predictions")
+    print("  GET   /api/health           → Health check")
+    print("  GET   /api/info             → API information")
+    print("\n" + "="*60 + "\n")
     app.run(debug=True, port=5000)
-
-
-def generate_recommendations(status):
-    """Generate recommendations based on learning status"""
-    recommendations = []
-    
-    metrics = status.get('accuracy_metrics', {})
-    
-    if metrics.get('accuracy', 0) < 0.85:
-        recommendations.append("Accuracy is below 85%. Consider collecting more feedback data.")
-    
-    if metrics.get('false_positives', 0) > metrics.get('false_negatives', 0):
-        recommendations.append("High false positives detected. System is too conservative.")
-    
-    if metrics.get('false_negatives', 0) > 5:
-        recommendations.append(f"Warning: {metrics['false_negatives']} false negatives detected. Model missing fraud cases.")
-    
-    return recommendations
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -484,37 +524,46 @@ def generate_recommendations(status):
 @app.route('/api/compare-models', methods=['POST'])
 def compare_models():
     """
-    Compare predictions from different model variants
-    Useful for understanding which model is most suitable
+    Compare predictions from all Tier 1 model components individually.
+    Returns scores from each sub-model for side-by-side comparison.
     """
     try:
-        data = request.json
-        job_description = data.get('description', '')
+        data = request.json or {}
         
-        if not job_description:
+        if not data.get('description'):
             return jsonify({'error': 'Job description required'}), 400
         
-        results = {
-            'job_summary': job_description[:100] + '...',
-            'model_predictions': {}
+        job = {
+            'title':        data.get('title', ''),
+            'description':  data.get('description', ''),
+            'requirements': data.get('requirements', ''),
+            'company':      data.get('company', ''),
+            'salary':       data.get('salary', ''),
+            'email':        data.get('email', ''),
+            'location':     data.get('location', ''),
         }
         
-        # BERT prediction
-        if 'bert' in models:
-            try:
-                results['model_predictions']['bert'] = models['bert'].predict(job_description)
-            except:
-                results['model_predictions']['bert'] = 'Not available'
+        text_result     = text_model(job)
+        anomaly_result  = anomaly_model(job)
+        metadata_result = metadata_model(job)
+        content_result  = content_model(job)
+        xgboost_result  = xgboost_model(
+            text_score=text_result.score,
+            anomaly_score=anomaly_result.score,
+            metadata_score=metadata_result.score
+        )
         
-        # Multilingual prediction
-        if 'multilingual' in models:
-            try:
-                ml_result = models['multilingual'].predict(job_description)
-                results['model_predictions']['multilingual'] = ml_result['fraud_score']
-            except:
-                results['model_predictions']['multilingual'] = 'Not available'
-        
-        return jsonify(results)
+        return jsonify({
+            'status': 'success',
+            'job_summary': data.get('description', '')[:100] + '...',
+            'model_predictions': {
+                'text_analyzer':       {'score': text_result.score,     'model': 'TF-IDF + Logistic Regression'},
+                'anomaly_detector':    {'score': anomaly_result.score,   'model': 'Isolation Forest'},
+                'metadata_classifier': {'score': metadata_result.score,  'model': 'Random Forest'},
+                'content_fusion':      {'score': content_result.score,   'model': 'Text+Anomaly Weighted Fusion'},
+                'xgboost_ensemble':    {'score': xgboost_result.score,   'model': 'XGBoost Gradient Boosting'},
+            }
+        })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -532,20 +581,3 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
-
-if __name__ == '__main__':
-    print("\n" + "="*60)
-    print("Enhanced ML Fraud Detection API - Starting Server")
-    print("="*60)
-    print("\nAvailable Endpoints:")
-    print("  POST  /api/analyze-bert          → BERT text analysis")
-    print("  POST  /api/analyze-multilingual  → Multilingual analysis")
-    print("  POST  /api/analyze-advanced      → Advanced ensemble (XGBoost+NN)")
-    print("  POST  /api/feedback              → Record prediction feedback")
-    print("  GET   /api/learning-status       → Get continuous learning status")
-    print("  POST  /api/compare-models        → Compare model predictions")
-    print("  GET   /api/health                → Health check")
-    print("\n" + "="*60)
-    print("Connecting to database...\n")
-    
-    app.run(debug=True, port=5000, host='0.0.0.0')

@@ -6,6 +6,13 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
+    /* Prevent auto-discovery of type stubs bundled inside recharts (d3-color,
+       d3-path), react (prop-types), and @react-three/fiber (three, webxr).
+       Those packages ship internal type declarations that TypeScript tries to
+       load as standalone @types/* libraries, causing TS2688 errors.
+       With "jsx": "react-jsx" and explicit imports, [] works fine here. */
+    "types": [],
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
