@@ -93,12 +93,14 @@ interface AnalysisResultProps {
     textScore?: number;
     metadataScore?: number;
     anomalyScore?: number;
+    contentScore?: number;
+    xgboostScore?: number;
     llmExplanation?: string;
   };
 }
 
 const AnalysisResult = ({ result }: AnalysisResultProps) => {
-  const { isFake, confidence, factors, extractedData, textScore, metadataScore, anomalyScore, llmExplanation } = result;
+  const { isFake, confidence, factors, extractedData, textScore, metadataScore, anomalyScore, contentScore, xgboostScore, llmExplanation } = result;
 
   // Derive model scores from confidence if not explicitly provided
   const hasMLScores = textScore !== undefined && metadataScore !== undefined && anomalyScore !== undefined;
@@ -238,6 +240,8 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
         textScore={hasMLScores ? textScore! : Math.min(100, confidence + 5)}
         metadataScore={hasMLScores ? metadataScore! : Math.max(0, confidence - 10)}
         anomalyScore={hasMLScores ? anomalyScore! : Math.round(confidence * 0.7)}
+        contentScore={result.contentScore}
+        xgboostScore={result.xgboostScore}
         finalScore={hasMLScores ? finalScore : confidence}
       />
 

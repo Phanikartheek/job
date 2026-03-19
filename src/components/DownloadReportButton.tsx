@@ -13,6 +13,8 @@ export interface ReportRow {
     textScore: number;
     metadataScore: number;
     anomalyScore: number;
+    contentScore?: number;
+    xgboostScore?: number;
     finalScore: number;
     riskLevel: string;
 }
@@ -30,6 +32,8 @@ export interface SingleJobReportProps {
     textScore: number;
     metadataScore: number;
     anomalyScore: number;
+    contentScore?: number;
+    xgboostScore?: number;
 }
 
 interface DownloadReportButtonProps {
@@ -61,15 +65,15 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
             const [r, g, b] = riskRGB(singleJob.riskLevel);
 
             // Header banner
-            doc.setFillColor(10, 0, 0);
+            doc.setFillColor(20, 5, 0);
             doc.rect(0, 0, W, 28, "F");
             doc.setFontSize(13);
             doc.setFont("helvetica", "bold");
-            doc.setTextColor(220, 38, 38);
-            doc.text("AI RECRUITMENT FRAUD INTELLIGENCE", 14, 12);
+            doc.setTextColor(240, 80, 0);
+            doc.text("5-MODEL AI FRAUD INTELLIGENCE", 14, 12);
             doc.setFontSize(8);
             doc.setFont("helvetica", "normal");
-            doc.setTextColor(120, 120, 120);
+            doc.setTextColor(150, 150, 150);
             doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
 
             // Risk banner
@@ -78,7 +82,7 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
             doc.setFontSize(14);
             doc.setFont("helvetica", "bold");
             doc.setTextColor(255, 255, 255);
-            doc.text(`⚠ RISK LEVEL: ${singleJob.riskLevel}  —  FRAUD SCORE: ${singleJob.finalScore}/100`, 20, 47);
+            doc.text(`⚠ RISK LEVEL: ${singleJob.riskLevel}  —  FINAL ENSEMBLE SCORE: ${singleJob.finalScore}/100`, 20, 47);
 
             // Job metadata
             let y = 65;
@@ -105,10 +109,13 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
             y += 4;
             autoTable(doc, {
                 startY: y,
-                head: [["AI Model", "Score", "Weight"]],
+                head: [["AI Pipeline Layer", "Score", "Weight Contribution"]],
                 body: [
-                    ["Combined Content Analyzer (RoBERTa + Isolation Forest)", `${singleJob.textScore}/100`, "70%"],
-                    ["Metadata Neural Network", `${singleJob.metadataScore}/100`, "30%"],
+                    ["1. RoBERTa Text Analyzer", `${singleJob.textScore}/100`, "Feeds Model 4"],
+                    ["2. Isolation Forest (Anomalies)", `${singleJob.anomalyScore}/100`, "Feeds Model 4"],
+                    ["3. Metadata Neural Network", `${singleJob.metadataScore}/100`, "30%"],
+                    ["4. Content Fusion (Text+Anomaly)", `${singleJob.contentScore ?? Math.round(singleJob.textScore*0.75 + singleJob.anomalyScore*0.25)}/100`, "40%"],
+                    ["5. XGBoost Ensemble", `${singleJob.xgboostScore ?? singleJob.finalScore}/100`, "30%"],
                     ["⭐ Final Composite Score", `${singleJob.finalScore}/100`, "—"],
                 ],
                 theme: "grid",
@@ -168,10 +175,10 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
     const downloadCSV = () => {
         setLoading("csv");
         try {
-            const headers = ["Job Title", "Company", "Location", "Salary", "Content Score", "Metadata Score", "Anomaly Score", "Final Score", "Risk Level"];
+            const headers = ["Job Title", "Company", "Location", "Salary", "Text Score", "Metadata Score", "Anomaly Score", "Content Fusion", "XGBoost Score", "Final Score", "Risk Level"];
             const rows = data.map((r) => [
                 r.title, r.company, r.location || "N/A", r.salary || "N/A",
-                r.textScore, r.metadataScore, r.anomalyScore, r.finalScore, r.riskLevel,
+                r.textScore, r.metadataScore, r.anomalyScore, r.contentScore || 0, r.xgboostScore || 0, r.finalScore, r.riskLevel,
             ]);
 
             const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
@@ -207,7 +214,7 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
             doc.setFontSize(8);
             doc.setFont("helvetica", "normal");
             doc.text(
-                `Generated: ${new Date().toLocaleString()} | Total Records: ${data.length} | Combined Content Analyzer + Metadata NN`,
+                `Generated: ${new Date().toLocaleString()} | Total Records: ${data.length} | 5-Model Ensemble Pipeline`,
                 14,
                 22
             );
@@ -223,25 +230,26 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
 
             autoTable(doc, {
                 startY: 44,
-                head: [["#", "Job Title", "Company", "Location", "Content Score", "Metadata", "Anomaly", "Final Score", "Risk Level"]],
+                head: [["#", "Job Title", "Company", "Text", "Meta", "Anom", "Fusion", "XGB", "Final", "Risk"]],
                 body: data.map((r, i) => [
                     i + 1,
-                    r.title,
-                    r.company,
-                    r.location || "N/A",
-                    `${r.textScore}/100`,
-                    `${r.metadataScore}/100`,
-                    `${r.anomalyScore}/100`,
-                    `${r.finalScore}/100`,
+                    (r.title || "").substring(0, 25),
+                    (r.company || "").substring(0, 15),
+                    `${r.textScore}`,
+                    `${r.metadataScore}`,
+                    `${r.anomalyScore}`,
+                    `${r.contentScore || 0}`,
+                    `${r.xgboostScore || 0}`,
+                    `${r.finalScore}`,
                     r.riskLevel,
                 ]),
                 theme: "grid",
                 headStyles: { fillColor: [127, 0, 0], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
                 bodyStyles: { fontSize: 8, textColor: [30, 30, 30] },
                 alternateRowStyles: { fillColor: [245, 235, 235] },
-                columnStyles: { 7: { fontStyle: "bold" }, 8: { fontStyle: "bold" } },
+                columnStyles: { 8: { fontStyle: "bold" }, 9: { fontStyle: "bold" } },
                 didDrawCell: (hookData) => {
-                    if (hookData.section === "body" && hookData.column.index === 8) {
+                    if (hookData.section === "body" && hookData.column.index === 9) {
                         const val = hookData.cell.raw as string;
                         const [r2, g2, b2] = riskRGB(val);
                         doc.setTextColor(r2, g2, b2);

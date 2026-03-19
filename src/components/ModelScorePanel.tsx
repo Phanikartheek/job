@@ -2,6 +2,8 @@ interface ModelScorePanelProps {
     textScore: number;
     metadataScore: number;
     anomalyScore: number;
+    contentScore?: number;
+    xgboostScore?: number;
     finalScore: number;
 }
 
@@ -41,7 +43,7 @@ const ScoreBar = ({
                 <div className="text-right">
                     <span className={`text-lg font-bold ${colors.text}`}>{score}</span>
                     <span className="text-xs text-gray-600 ml-1">/ 100</span>
-                    <p className="text-xs text-gray-600">{weight}</p>
+                    {weight && <p className="text-xs text-gray-600">{weight}</p>}
                 </div>
             </div>
             <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
@@ -54,52 +56,69 @@ const ScoreBar = ({
     );
 };
 
-const ModelScorePanel = ({ textScore, metadataScore, anomalyScore, finalScore }: ModelScorePanelProps) => {
+const ModelScorePanel = ({ textScore, metadataScore, anomalyScore, contentScore, xgboostScore, finalScore }: ModelScorePanelProps) => {
     const finalColor = getFinalColor(finalScore);
 
     return (
-        <div className="rounded-xl bg-black border border-purple-900/30 p-6 space-y-6">
+        <div className="rounded-xl bg-black border border-orange-900/40 p-6 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b border-orange-900/30 pb-4">
                 <div>
-                    <p className="text-sm font-bold text-white tracking-widest">MODEL SCORE BREAKDOWN</p>
-                    <p className="text-xs text-gray-500">Multi-model AI pipeline analysis</p>
+                    <p className="text-sm font-bold text-white tracking-widest">5-MODEL AI PIPELINE</p>
+                    <p className="text-xs text-orange-500/80 mt-1">Full stack diagnostic view</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest">Final Risk Score</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-widest">Ensemble Final</p>
                     <p className={`text-4xl font-extrabold ${finalColor}`}>{finalScore}</p>
-                    <p className="text-xs text-gray-600">/ 100</p>
                 </div>
             </div>
 
             {/* Formula display */}
-            <div className="px-4 py-2 rounded-lg bg-gray-900 border border-purple-900/20 text-center">
-                <p className="text-xs text-gray-500 font-mono">
-                    Final = <span className="text-purple-400">(0.6 × Text)</span> + <span className="text-blue-400">(0.3 × Metadata)</span> + <span className="text-teal-400">(0.1 × Anomaly)</span>
-                    <span className="text-white ml-2">= {finalScore}</span>
-                </p>
+            <div className="px-4 py-3 rounded-lg bg-gray-900 border border-orange-900/20 text-center font-mono text-[11px] sm:text-xs">
+                <span className="text-gray-500">FINAL SCORE = </span>
+                <span className="text-blue-400">(0.4 × Content)</span> <span className="text-gray-600">+</span>{" "}
+                <span className="text-purple-400">(0.3 × Metadata)</span> <span className="text-gray-600">+</span>{" "}
+                <span className="text-red-400">(0.3 × XGBoost)</span>
             </div>
 
-            {/* Score bars */}
-            <div className="space-y-5">
-                <ScoreBar
-                    label="RoBERTa Text Model"
-                    sublabel="NLP-based fraud pattern detection"
-                    score={textScore}
-                    weight="Weight: 60%"
-                />
-                <ScoreBar
-                    label="Metadata Neural Network"
-                    sublabel="Salary, location & contact analysis"
-                    score={metadataScore}
-                    weight="Weight: 30%"
-                />
-                <ScoreBar
-                    label="Isolation Forest"
-                    sublabel="Anomaly & outlier detection"
-                    score={anomalyScore}
-                    weight="Weight: 10%"
-                />
+            {/* Score bars for the 5 models */}
+            <div className="space-y-5 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div className="space-y-6">
+                        <ScoreBar
+                            label="1. RoBERTa Text Analyzer"
+                            sublabel="NLP linguistic fraud pattern detection"
+                            score={textScore}
+                            weight="→ Feeds Model 4"
+                        />
+                        <ScoreBar
+                            label="2. Isolation Forest"
+                            sublabel="Structural anomaly & outlier detection"
+                            score={anomalyScore}
+                            weight="→ Feeds Model 4"
+                        />
+                        <ScoreBar
+                            label="4. Content Fusion"
+                            sublabel="Weighted fusion of Text (75%) & Anomaly (25%)"
+                            score={contentScore ?? Math.round(textScore * 0.75 + anomalyScore * 0.25)}
+                            weight="Weight: 40%"
+                        />
+                    </div>
+                    <div className="space-y-6">
+                        <ScoreBar
+                            label="3. Metadata Neural Net"
+                            sublabel="Salary, location & contact analysis"
+                            score={metadataScore}
+                            weight="Weight: 30%"
+                        />
+                        <ScoreBar
+                            label="5. XGBoost Ensemble"
+                            sublabel="Gradient boosting decision refinement"
+                            score={xgboostScore ?? finalScore} /* Fallback if missing */
+                            weight="Weight: 30%"
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     );

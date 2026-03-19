@@ -155,6 +155,7 @@ export interface FlaskAnalysisResult extends MLScores {
     isFake: boolean;
     confidence: number;
     contentScore: number;
+    xgboostScore: number;
 }
 
 /**
@@ -184,6 +185,7 @@ export async function analyzeJobViaFlask(job: JobInput): Promise<FlaskAnalysisRe
             anomalyScore: data.anomalyScore,
             metadataScore: data.metadataScore,
             contentScore: data.contentScore,
+            xgboostScore: data.xgboostScore,
             finalScore: data.finalScore,
             riskLevel: data.riskLevel,
             factors: data.factors,
@@ -198,6 +200,7 @@ export async function analyzeJobViaFlask(job: JobInput): Promise<FlaskAnalysisRe
             isFake: ts.finalScore >= 50,
             confidence: ts.finalScore,
             contentScore: ts.textScore,
+            xgboostScore: ts.finalScore, // Fallback placeholder
         };
     }
 }

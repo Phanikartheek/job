@@ -206,6 +206,7 @@ def analyze_job():
             'anomalyScore':    anomaly_result.score,
             'metadataScore':   metadata_result.score,
             'contentScore':    content_result.score,
+            'xgboostScore':    xgboost_result.score,
             'finalScore':      final_score,
             'riskLevel':       risk_level,
             'factors':         all_flags,
@@ -248,6 +249,116 @@ def analyze_job():
             'error': f'Analysis failed: {str(e)}',
             'status': 'error'
         }), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BULK ANALYSIS ENDPOINT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/analyze-bulk', methods=['POST'])
+def analyze_bulk():
+    """
+    Analyze multiple job postings at once.
+    Expects JSON: { "jobs": [ { "title": "...", "description": "..." }, ... ] }
+    """
+    try:
+        data = request.json or {}
+        jobs_input = data.get('jobs', [])
+        
+        if not isinstance(jobs_input, list):
+            return jsonify({'error': 'jobs must be a list'}), 400
+            
+        results = []
+        for idx, job_data in enumerate(jobs_input):
+            job = {
+                "title": job_data.get("title", ""),
+                "description": job_data.get("description", ""),
+                "requirements": job_data.get("requirements", ""),
+                "company": job_data.get("company", ""),
+                "salary": job_data.get("salary", ""),
+                "email": job_data.get("email", ""),
+                "location": job_data.get("location", "")
+            }
+            
+            # Skip empty descriptions for safety
+            if not job.get("description") and not job.get("title"):
+                continue
+
+            text_result = text_model(job)
+            anomaly_result = anomaly_model(job)
+            metadata_result = metadata_model(job)
+            content_result = content_model(job)
+            
+            xgboost_result = xgboost_model(
+                text_score=text_result.score,
+                anomaly_score=anomaly_result.score,
+                metadata_score=metadata_result.score
+            )
+            
+            final_score = int(
+                (content_result.score * 0.40) +
+                (metadata_result.score * 0.30) +
+                (xgboost_result.score * 0.30)
+            )
+            final_score = max(0, min(100, final_score))
+            
+            if final_score >= 75:
+                risk_level = 'CRITICAL'
+            elif final_score >= 50:
+                risk_level = 'HIGH'
+            elif final_score >= 25:
+                risk_level = 'MEDIUM'
+            else:
+                risk_level = 'LOW'
+                
+            all_flags = []
+            all_flags.extend(text_result.flags or [])
+            all_flags.extend(anomaly_result.flags or [])
+            all_flags.extend(metadata_result.flags or [])
+            all_flags.extend(xgboost_result.flags or [])
+            
+            company = job.get('company') or 'this company'
+            title   = job.get('title')   or 'this position'
+            sep = '; '
+            
+            if risk_level == 'LOW':
+                llm_explanation = 'The job posting for "' + title + '" at ' + company + ' shows low fraud risk.'
+            elif risk_level == 'MEDIUM':
+                top_flag = all_flags[0] if all_flags else 'ambiguous signals'
+                llm_explanation = 'Moderate fraud risk. Primary concern: ' + top_flag + '.'
+            elif risk_level == 'HIGH':
+                top_flags_str = sep.join(all_flags[:2])
+                llm_explanation = 'HIGH RISK. Red flags: ' + top_flags_str + '.'
+            else:
+                top_flags_str = sep.join(all_flags[:2])
+                llm_explanation = 'CRITICAL ALERT. Indicators: ' + top_flags_str + '.'
+
+            results.append({
+                'id': idx + 1,
+                'title': title,
+                'company': company,
+                'location': job.get('location'),
+                'salary': job.get('salary'),
+                'isFake': final_score >= 50,
+                'confidence': final_score,
+                'textScore': text_result.score,
+                'anomalyScore': anomaly_result.score,
+                'metadataScore': metadata_result.score,
+                'contentScore': content_result.score,
+                'xgboostScore': xgboost_result.score,
+                'finalScore': final_score,
+                'riskLevel': risk_level,
+                'factors': all_flags,
+                'llmExplanation': llm_explanation
+            })
+            
+        return jsonify({
+            'status': 'success',
+            'results': results
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────

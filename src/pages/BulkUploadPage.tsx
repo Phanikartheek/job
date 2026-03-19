@@ -110,6 +110,8 @@ const BulkUploadPage = () => {
                         textScore: r.textScore ?? 0,
                         metadataScore: r.metadataScore ?? 0,
                         anomalyScore: r.anomalyScore ?? 0,
+                        contentScore: r.contentScore,
+                        xgboostScore: r.xgboostScore,
                         finalScore: r.finalScore,
                         riskLevel: r.riskLevel,
                         factors: r.factors || [],
@@ -209,6 +211,7 @@ const BulkUploadPage = () => {
     const reportData = results.map((r) => ({
         title: r.title, company: r.company, location: r.location, salary: r.salary,
         textScore: r.textScore, metadataScore: r.metadataScore, anomalyScore: r.anomalyScore,
+        contentScore: r.contentScore, xgboostScore: r.xgboostScore,
         finalScore: r.finalScore, riskLevel: r.riskLevel,
     }));
 

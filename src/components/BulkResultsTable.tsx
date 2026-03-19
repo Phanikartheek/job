@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
     AlertTriangle, CheckCircle2, ChevronDown, ChevronUp,
 } from "lucide-react";
@@ -14,6 +14,8 @@ export interface BulkResultRow {
     textScore: number;
     metadataScore: number;
     anomalyScore: number;
+    contentScore?: number;
+    xgboostScore?: number;
     finalScore: number;
     riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
     factors: string[];
@@ -62,9 +64,8 @@ const BulkResultsTable = ({ rows }: { rows: BulkResultRow[] }) => {
                     </thead>
                     <tbody className="divide-y divide-red-900/10">
                         {rows.map((row) => (
-                            <>
+                            <React.Fragment key={row.id}>
                                 <tr
-                                    key={row.id}
                                     className="hover:bg-gray-900/50 cursor-pointer transition-colors"
                                     onClick={() => toggle(row.id)}
                                 >
@@ -97,13 +98,15 @@ const BulkResultsTable = ({ rows }: { rows: BulkResultRow[] }) => {
 
                                 {/* Expanded detail row */}
                                 {expanded === row.id && (
-                                    <tr key={`${row.id}-detail`}>
+                                    <tr>
                                         <td colSpan={10} className="px-4 py-6 bg-gray-950">
                                             <div className="grid md:grid-cols-2 gap-6">
                                                 <ModelScorePanel
                                                     textScore={row.textScore}
                                                     metadataScore={row.metadataScore}
                                                     anomalyScore={row.anomalyScore}
+                                                    contentScore={row.contentScore}
+                                                    xgboostScore={row.xgboostScore}
                                                     finalScore={row.finalScore}
                                                 />
                                                 <div className="space-y-4">
@@ -130,7 +133,7 @@ const BulkResultsTable = ({ rows }: { rows: BulkResultRow[] }) => {
                                         </td>
                                     </tr>
                                 )}
-                            </>
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>
