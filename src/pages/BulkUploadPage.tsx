@@ -87,7 +87,8 @@ const BulkUploadPage = () => {
 
             for (let start = 0; start < jobs.length; start += BATCH) {
                 const batch = jobs.slice(start, start + BATCH);
-                const res = await fetch("/api/analyze-bulk", {
+                const API_URL = import.meta.env.VITE_API_URL || "";
+                const res = await fetch(`${API_URL}/api/analyze-bulk`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ jobs: batch }),

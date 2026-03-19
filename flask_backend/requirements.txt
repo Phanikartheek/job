@@ -3,3 +3,5 @@ flask-cors
 scikit-learn
 numpy
 joblib
+gunicorn==21.2.0
+xgboost==2.0.0

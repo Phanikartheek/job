@@ -163,7 +163,8 @@ export interface FlaskAnalysisResult extends MLScores {
  */
 export async function analyzeJobViaFlask(job: JobInput): Promise<FlaskAnalysisResult> {
     try {
-        const response = await fetch('/api/analyze', {
+        const API_URL = import.meta.env.VITE_API_URL || "";
+        const response = await fetch(`${API_URL}/api/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(job),
