@@ -27,10 +27,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-xlsx": ["xlsx", "papaparse"],
           "vendor-charts": ["recharts"],
-          "vendor-ui": ["@radix-ui/react-dialog", "@radix-ui/react-tabs", "lucide-react"],
         },
       },
     },
