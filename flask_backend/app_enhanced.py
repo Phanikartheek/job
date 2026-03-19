@@ -53,11 +53,16 @@ def initialize_models():
         print("[OK] All Tier 1 models initialized successfully\n")
         
     except Exception as e:
-        print(f"[ERROR] Model initialization error: {str(e)}")
-        raise
+        print(f"\n[CRITICAL ERROR] Model initialization error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        print("The server will boot, but ML endpoints will fail.\n")
 
 # Initialize models on startup
-initialize_models()
+try:
+    initialize_models()
+except Exception:
+    pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
