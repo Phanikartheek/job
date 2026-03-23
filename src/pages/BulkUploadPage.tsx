@@ -296,7 +296,7 @@ const BulkUploadPage = () => {
                     <p className="text-xs text-gray-500">
                         {processingMode === "flask"
                             ? "🐍 Python server processing — fast, no browser lag…"
-                            : "RoBERTa → Metadata NN → Isolation Forest → LLM Explanation…"}
+                            : "TF-IDF → Metadata NN → Isolation Forest → LLM Explanation…"}
                     </p>
                 </div>
             )}
@@ -340,7 +340,7 @@ const BulkUploadPage = () => {
                     <div className="flex items-start gap-2 p-4 rounded-lg bg-gray-900 border border-gray-800">
                         <CheckCircle2 className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-gray-500">
-                            Scores computed via RoBERTa text analysis (60%) + Metadata Neural Network (30%) + Isolation Forest anomaly detection (10%).
+                            Scores computed via TF-IDF text analysis (60%) + Metadata Neural Network (30%) + Isolation Forest anomaly detection (10%).
                             Click any row for detailed model breakdown and LLM explanation. Threshold: ≥ 50 = Fraud Risk.
                         </p>
                     </div>

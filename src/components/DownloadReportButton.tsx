@@ -111,7 +111,7 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
                 startY: y,
                 head: [["AI Pipeline Layer", "Score", "Weight Contribution"]],
                 body: [
-                    ["1. RoBERTa Text Analyzer", `${singleJob.textScore}/100`, "Feeds Model 4"],
+                    ["1. TF-IDF Text Analyzer", `${singleJob.textScore}/100`, "Feeds Model 4"],
                     ["2. Isolation Forest (Anomalies)", `${singleJob.anomalyScore}/100`, "Feeds Model 4"],
                     ["3. Metadata Neural Network", `${singleJob.metadataScore}/100`, "30%"],
                     ["4. Content Fusion (Text+Anomaly)", `${singleJob.contentScore ?? Math.round(singleJob.textScore*0.75 + singleJob.anomalyScore*0.25)}/100`, "40%"],

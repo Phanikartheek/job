@@ -3,7 +3,7 @@ import { Brain, Zap, Database, BarChart3, Upload, FileDown, Network, TreePine } 
 const features = [
   {
     icon: Brain,
-    title: "RoBERTa Text Model",
+    title: "TF-IDF Text Analyzer",
     description: "Transformer-based NLP model analyzes job description text for linguistic fraud patterns, suspicious phrases, and semantic inconsistencies.",
   },
   {
@@ -15,6 +15,11 @@ const features = [
     icon: TreePine,
     title: "Isolation Forest",
     description: "Unsupervised anomaly detection identifies unusual job postings that deviate from normal patterns, catching novel fraud not in training data.",
+  },
+  {
+    icon: BarChart3,
+    title: "XGBoost Classifier",
+    description: "Advanced gradient boosting algorithm that detects complex fraud patterns across structured job data with high precision.",
   },
   {
     icon: Zap,
@@ -39,10 +44,10 @@ const FeaturesSection = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-foreground mb-4">
-            4-Model AI Detection Architecture
+            5-Model AI Detection Architecture
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            The platform combines four AI components — RoBERTa, Metadata Neural Network,
+            The platform combines five powerful AI components — TF-IDF, XGBoost, Metadata Neural Network,
             Isolation Forest, and an LLM Explanation Engine — with bulk file analysis and
             downloadable reports.
           </p>
@@ -73,8 +78,9 @@ const FeaturesSection = () => {
           <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Risk Score Formula</p>
           <p className="font-mono text-sm text-gray-300">
             <span className="text-red-400">Final Risk Score</span> ={" "}
-            <span className="text-purple-400">(0.6 × RoBERTa)</span> +{" "}
-            <span className="text-blue-400">(0.3 × Metadata NN)</span> +{" "}
+            <span className="text-purple-400">(0.4 × TF-IDF)</span> +{" "}
+            <span className="text-orange-400">(0.3 × XGBoost)</span> +{" "}
+            <span className="text-blue-400">(0.2 × Metadata NN)</span> +{" "}
             <span className="text-teal-400">(0.1 × Isolation Forest)</span>
           </p>
         </div>

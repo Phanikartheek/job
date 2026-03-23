@@ -17,7 +17,7 @@ const steps = [
     icon: BarChart,
     step: "03",
     title: "4-Model AI Pipeline",
-    description: "Each posting passes through RoBERTa (text), Metadata Neural Network, and Isolation Forest. Scores are combined using weighted formula.",
+    description: "Each posting passes through TF-IDF (text), Metadata Neural Network, and Isolation Forest. Scores are combined using weighted formula.",
   },
   {
     icon: Bot,
@@ -82,7 +82,7 @@ const HowItWorksSection = () => {
             AI Technology Stack
           </h3>
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {["RoBERTa (Text Model)", "Metadata Neural Network", "Isolation Forest", "LLM Explanation Engine"].map((tech, index) => (
+            {["TF-IDF (Text Model)", "Metadata Neural Network", "Isolation Forest", "LLM Explanation Engine"].map((tech, index) => (
               <div
                 key={index}
                 className="px-4 py-3 rounded-lg bg-secondary/50 border border-border text-center"

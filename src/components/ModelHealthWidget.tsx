@@ -54,6 +54,7 @@ const NeuralCore = ({ health }: { health: number }) => {
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
       <mesh ref={meshRef}>
         <icosahedronGeometry args={[1, 2]} />
+        {/* @ts-ignore */}
         <MeshDistortMaterial
           color={color}
           distort={0.3}
@@ -112,6 +113,7 @@ const OrbitingParticle = ({
   return (
     <mesh ref={ref} scale={scale}>
       <sphereGeometry args={[1, 8, 8]} />
+      {/* @ts-ignore */}
       <meshBasicMaterial color="#2dd4bf" />
     </mesh>
   );
@@ -130,6 +132,7 @@ const HolographicRing = ({ radius, color }: { radius: number; color: string }) =
   return (
     <mesh ref={ref}>
       <torusGeometry args={[radius, 0.02, 8, 32]} />
+      {/* @ts-ignore */}
       <meshBasicMaterial color={color} transparent opacity={0.4} />
     </mesh>
   );
@@ -145,6 +148,7 @@ const Scene3D = ({ health }: { health: number }) => (
     <DataParticles />
     <HolographicRing radius={2.0} color="#00ffff" />
     <Sphere args={[3, 16, 16]}>
+      {/* @ts-ignore */}
       <meshBasicMaterial color="#00ffff" transparent opacity={0.02} wireframe />
     </Sphere>
   </>

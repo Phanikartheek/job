@@ -40,7 +40,7 @@ const HeroSection = () => {
 
           {/* SUBTITLE */}
           <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed animate-fade-in">
-            A 5-model AI pipeline — RoBERTa Text Analyzer, Isolation Forest, Metadata Neural Network,
+            A 5-model AI pipeline — TF-IDF Text Analyzer, Isolation Forest, Metadata Neural Network,
             Content Fusion, and XGBoost Ensemble — to detect fraudulent job postings with precision.
             Upload individual jobs or entire CSV/Excel files for bulk analysis.
           </p>
