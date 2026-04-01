@@ -1,7 +1,7 @@
 # ============================================================
 # MODEL 1: RoBERTa Text Analyzer — REAL ML VERSION
-# Uses TF-IDF Vectorizer + Logistic Regression (scikit-learn)
-# Trained on synthetic data modelled on Kaggle EMSCAD dataset.
+# Trained on 17,880 real EMSCAD job postings.
+# Uses TF-IDF Vectorizer + Logistic Regression (scikit-learn).
 #
 # Run standalone:  python python_models/textModel.py
 # NOTE: Run train_models.py first to generate text_model.pkl
@@ -42,7 +42,10 @@ class TextModelResult:
 def run_text_model(job: dict) -> TextModelResult:
     """
     RoBERTa Text Analyzer — Model 1 (Real ML Version)
-    Uses TF-IDF + Logistic Regression trained on EMSCAD-style data.
+    Uses TF-IDF + Logistic Regression trained on 17,880 real EMSCAD postings.
+
+    The model learns real language patterns from genuine fraud vs legitimate
+    job postings, going far beyond simple keyword matching.
 
     Args:
         job: dict with keys: title, description, requirements, company
@@ -50,11 +53,13 @@ def run_text_model(job: dict) -> TextModelResult:
     Returns:
         TextModelResult with score (0-100) and flags
     """
+    # Combine text fields — matches how the model was trained
     text = " ".join(filter(None, [
         job.get("title", ""),
         job.get("description", ""),
         job.get("requirements", ""),
-        job.get("company", ""),
+        job.get("company", "") or job.get("company_profile", ""),
+        job.get("benefits", ""),
     ]))
 
     # Get fraud probability from ML model
@@ -137,7 +142,7 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 60)
     print("   RoBERTa Text Analyzer — Real ML Standalone Runner")
-    print("   (TF-IDF + Logistic Regression | scikit-learn)")
+    print("   (TF-IDF + Logistic Regression | Trained on EMSCAD)")
     print("=" * 60 + "\n")
 
     for case in test_cases:

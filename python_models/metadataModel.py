@@ -1,6 +1,7 @@
 # ============================================================
 # MODEL 3: Metadata Neural Network — REAL ML VERSION
-# Uses Random Forest Classifier (scikit-learn) on structured fields.
+# Trained on 17,880 real EMSCAD job postings (metadata features).
+# Uses Random Forest Classifier (scikit-learn) on 6 metadata features.
 #
 # Run standalone:  python python_models/metadataModel.py
 # NOTE: Run train_models.py first to generate metadata_model.pkl
@@ -11,12 +12,10 @@ import os
 import sys
 import joblib
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "metadata_model.pkl")
-
-SUSPICIOUS_DOMAINS = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com"]
 
 # ---- Auto-train if model not found ----
 def _ensure_model():
@@ -40,66 +39,106 @@ class MetadataModelResult:
     email_flag: bool = False
     location_flag: bool = False
     company_flag: bool = False
+    red_flags: List[str] = field(default_factory=list)
+    suspicious_features: List[str] = field(default_factory=list)
+
+
+SUSPICIOUS_DOMAINS = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com"]
 
 
 def _extract_metadata_features(job: dict):
-    """Extract 6 structured metadata features for the Random Forest."""
-    salary_str   = job.get("salary", "").lower()
-    email        = job.get("email", "")
-    location     = job.get("location", "").lower().strip()
-    company      = job.get("company", "").lower().strip()
-    description  = job.get("description", "")
+    """
+    Extract 6 metadata features for Random Forest.
+    These match the features used during EMSCAD training.
+
+    Features:
+      1. salary_missing           — no salary info provided
+      2. company_profile_missing  — no company info provided
+      3. has_company_logo         — from EMSCAD column; at inference, heuristic
+      4. has_questions             — from EMSCAD column; at inference, default
+      5. telecommuting            — from EMSCAD column; at inference, keyword check
+      6. requirements_missing     — no requirements listed
+    """
+    salary = job.get("salary", "") or job.get("salary_range", "")
+    company = job.get("company", "") or job.get("company_profile", "")
+    location = job.get("location", "")
+    reqs = job.get("requirements", "")
+    desc = job.get("description", "")
+    email = job.get("email", "")
 
     # Feature 1: salary missing
-    salary_missing = 1.0 if not salary_str else 0.0
+    salary_missing = 1.0 if not salary.strip() else 0.0
 
-    # Feature 2: unrealistically high weekly/monthly salary
-    salary_too_high = 0.0
-    amounts = [a.replace(",", "") for a in re.findall(r'[\d,]+', salary_str) if a.replace(",", "")]
-    if amounts:
-        max_amt = max(float(a) for a in amounts)
-        if (max_amt > 10000 and "week" in salary_str) or \
-           (max_amt > 50000 and "month" in salary_str):
-            salary_too_high = 1.0
+    # Feature 2: company profile missing
+    company_missing = 1.0 if not company.strip() else 0.0
 
-    # Feature 3: vague salary ("unlimited", "uncapped")
-    salary_unlimited = 1.0 if ("unlimited" in salary_str or "uncapped" in salary_str) else 0.0
+    # Feature 3: has_company_logo
+    # From EMSCAD column if available; otherwise heuristic (company provided → likely has logo)
+    if "has_company_logo" in job:
+        try:
+            has_logo = float(job["has_company_logo"])
+        except (ValueError, TypeError):
+            has_logo = 1.0 if company.strip() else 0.0
+    else:
+        has_logo = 1.0 if company.strip() else 0.0
 
-    # Feature 4: personal email domain
-    email_personal = 0.0
+    # Feature 4: has_questions
+    if "has_questions" in job:
+        try:
+            has_questions = float(job["has_questions"])
+        except (ValueError, TypeError):
+            has_questions = 0.0
+    else:
+        has_questions = 0.0
+
+    # Feature 5: telecommuting
+    if "telecommuting" in job:
+        try:
+            telecommuting = float(job["telecommuting"])
+        except (ValueError, TypeError):
+            telecommuting = 0.0
+    else:
+        # Infer from text at inference time
+        text_lower = (desc + " " + location).lower()
+        remote_keywords = ["remote", "work from home", "telecommute", "wfh", "anywhere"]
+        telecommuting = 1.0 if any(kw in text_lower for kw in remote_keywords) else 0.0
+
+    # Feature 6: requirements missing
+    requirements_missing = 1.0 if not reqs.strip() else 0.0
+
+    features = np.array([[salary_missing, company_missing, has_logo,
+                           has_questions, telecommuting, requirements_missing]])
+
+    # Build flag info for human-readable output
+    flags_raw = {
+        "salary_missing": bool(salary_missing),
+        "company_missing": bool(company_missing),
+        "no_logo": has_logo < 0.5,
+        "no_questions": has_questions < 0.5,
+        "telecommuting": bool(telecommuting),
+        "requirements_missing": bool(requirements_missing),
+    }
+
+    # Also check email if provided (extra signal, not part of ML features)
+    email_personal = False
     if email:
         domain = email.split("@")[-1].lower() if "@" in email else ""
         if any(d in domain for d in SUSPICIOUS_DOMAINS):
-            email_personal = 1.0
-    elif re.search(r'@(gmail|yahoo|hotmail|outlook)\.', description, re.IGNORECASE):
-        email_personal = 1.0
+            email_personal = True
+    elif re.search(r'@(gmail|yahoo|hotmail|outlook)\.', desc, re.IGNORECASE):
+        email_personal = True
+    flags_raw["email_personal"] = email_personal
 
-    # Feature 5: location missing or vague
-    location_missing = 1.0 if (not location or location in ("anywhere", "any location")) else 0.0
-
-    # Feature 6: company name missing or very short
-    company_short = 1.0 if (not company or len(company) < 3) else 0.0
-
-    features = np.array([[salary_missing, salary_too_high, salary_unlimited,
-                          email_personal, location_missing, company_short]])
-    flags_raw = {
-        "salary_missing":   bool(salary_missing),
-        "salary_too_high":  bool(salary_too_high),
-        "salary_unlimited": bool(salary_unlimited),
-        "email_personal":   bool(email_personal),
-        "location_missing": bool(location_missing),
-        "company_short":    bool(company_short),
-    }
     return features, flags_raw
 
 
 def run_metadata_model(job: dict) -> MetadataModelResult:
     """
     Metadata Neural Network — Model 3 (Real ML Version)
-    Uses Random Forest trained on structured job metadata features.
+    Trained on Random Forest using 6 metadata features from 17,880 EMSCAD postings.
 
     Args:
-        job: dict with keys: salary, email, location, company, description
+        job: dict with keys: salary, email, location, company, description, requirements
 
     Returns:
         MetadataModelResult with score and individual field flags
@@ -112,26 +151,33 @@ def run_metadata_model(job: dict) -> MetadataModelResult:
 
     # Build human-readable flags
     flags = []
+    suspicious_features = []
     salary_flag = email_flag = location_flag = company_flag = False
 
     if flags_raw["salary_missing"]:
         salary_flag = True
         flags.append("No salary information provided")
-    if flags_raw["salary_too_high"]:
-        salary_flag = True
-        flags.append("Unrealistically high salary claim")
-    if flags_raw["salary_unlimited"]:
-        salary_flag = True
-        flags.append("Vague 'unlimited earnings' salary claim")
+        suspicious_features.append("salary_missing")
+    if flags_raw["company_missing"]:
+        company_flag = True
+        flags.append("Company name/profile is missing")
+        suspicious_features.append("company_missing")
+    if flags_raw["no_logo"]:
+        flags.append("Job posting has no company logo")
+        suspicious_features.append("no_company_logo")
+    if flags_raw["requirements_missing"]:
+        flags.append("No job requirements listed — common in fraudulent postings")
+        suspicious_features.append("requirements_missing")
     if flags_raw["email_personal"]:
         email_flag = True
         flags.append("Contact email uses a personal domain (gmail/yahoo/hotmail)")
-    if flags_raw["location_missing"]:
+        suspicious_features.append("email_personal")
+
+    # Location check (not ML feature but useful flag)
+    location = job.get("location", "").lower().strip()
+    if not location or location in ("anywhere", "any location"):
         location_flag = True
         flags.append("No specific location or vague location provided")
-    if flags_raw["company_short"]:
-        company_flag = True
-        flags.append("Company name is missing or suspiciously short")
 
     return MetadataModelResult(
         score=min(100, max(0, score)),
@@ -141,6 +187,8 @@ def run_metadata_model(job: dict) -> MetadataModelResult:
         email_flag=email_flag,
         location_flag=location_flag,
         company_flag=company_flag,
+        red_flags=flags,
+        suspicious_features=suspicious_features,
     )
 
 
@@ -151,14 +199,15 @@ def run_metadata_model(job: dict) -> MetadataModelResult:
 if __name__ == "__main__":
     test_cases = [
         {
-            "label": "🔴 SCAM METADATA (personal email + unrealistic salary)",
+            "label": "🔴 SCAM METADATA (no company, no salary, no requirements)",
             "job": {
                 "title": "Data Entry",
-                "company": "XY",
-                "salary": "$15,000 per week",
+                "company": "",
+                "salary": "",
                 "email": "recruiter@gmail.com",
                 "location": "anywhere",
-                "description": "Contact us at jobs@yahoo.com",
+                "description": "Contact us at jobs@yahoo.com. Easy money. No interview needed.",
+                "requirements": "",
             },
         },
         {
@@ -169,14 +218,15 @@ if __name__ == "__main__":
                 "salary": "$130,000/year",
                 "email": "careers@google.com",
                 "location": "Bangalore, India",
-                "description": "Please apply through our official careers portal.",
+                "description": "Please apply through our official careers portal. We are looking for experienced engineers to join our cloud platform team. We offer competitive benefits including health insurance, 401k, and equity.",
+                "requirements": "5+ years in Python, TypeScript. Strong team collaboration skills. Bachelor's degree in Computer Science.",
             },
         },
     ]
 
     print("\n" + "=" * 60)
     print("   Metadata Neural Network — Real ML Standalone Runner")
-    print("   (Random Forest Classifier | scikit-learn)")
+    print("   (Random Forest | Trained on 17,880 EMSCAD postings)")
     print("=" * 60 + "\n")
 
     for case in test_cases:
