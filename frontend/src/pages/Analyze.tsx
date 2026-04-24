@@ -71,7 +71,7 @@ const Analyze = () => {
         description: jobData.description || analysisResult.extractedData?.description || null,
         is_fraud: analysisResult.isFake,
         confidence: Math.round(analysisResult.confidence),
-        factors: analysisResult.factors,
+        factors: analysisResult.factors || [],
       }).select().single();
 
       if (error) {
@@ -138,6 +138,7 @@ const Analyze = () => {
         metadataScore: mlScores.metadataScore,
         anomalyScore: mlScores.anomalyScore,
         llmExplanation: mlScores.llmExplanation,
+        insights: mlScores.insights || [],
       };
 
       setResult(enrichedResult);

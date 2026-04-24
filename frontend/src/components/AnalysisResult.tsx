@@ -205,7 +205,7 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
             </h4>
 
             <div className="space-y-3">
-              {factors.map((factor, index) => (
+              {(factors || []).map((factor, index) => (
                 <div
                   key={index}
                   className={`flex items-center gap-3 p-4 bg-gray-900 rounded-lg ${isFake
