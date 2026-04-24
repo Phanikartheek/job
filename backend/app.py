@@ -12,6 +12,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from api.routes import api_bp
+from api.feedback import feedback_bp
 from api.middleware import setup_middleware
 from utils.config import Config
 from utils.logger import logger
@@ -29,6 +30,7 @@ def create_app():
     
     # Register Blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
     
     @app.route('/')
     def index():

@@ -23,6 +23,7 @@ export interface AnalysisResult {
     finalScore: number;
     riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
     factors: string[];
+    insights?: Array<{ type: string; msg: string }>;
     llmExplanation: string;
     status: string;
 }

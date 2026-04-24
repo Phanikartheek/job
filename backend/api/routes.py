@@ -54,18 +54,20 @@ def analyze_job():
         )
         risk_level = scoring.determine_risk_level(final_score)
         
+        # Collect and humanize flags (The Reasoning Engine)
+        all_flags = []
+        all_flags.extend(text_result.flags or [])
+        all_flags.extend(anomaly_result.flags or [])
+        all_flags.extend(metadata_result.flags or [])
+        
+        insights = scoring.get_detection_insights(all_flags)
+        
         # XGBoost results
         xgboost_result = run_xgboost_model(
             text_score=text_result.score,
             anomaly_score=anomaly_result.score,
             metadata_score=metadata_result.score
         )
-        
-        # Collect flags
-        factors = []
-        factors.extend(text_result.flags or [])
-        factors.extend(anomaly_result.flags or [])
-        factors.extend(metadata_result.flags or [])
         
         return jsonify({
             'isFake':          final_score >= 50,
@@ -77,7 +79,7 @@ def analyze_job():
             'xgboostScore':    xgboost_result.score,
             'finalScore':      final_score,
             'riskLevel':       risk_level,
-            'factors':         factors,
+            'insights':        insights,
             'status':          'success'
         })
         

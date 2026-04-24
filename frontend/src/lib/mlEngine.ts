@@ -43,6 +43,7 @@ export async function analyzeJobViaFlask(job: JobInput): Promise<AnalysisResult>
             finalScore:      data.finalScore ?? 0,
             riskLevel:       data.riskLevel ?? "LOW",
             factors:         data.factors ?? [],
+            insights:        data.insights ?? [],
             llmExplanation:  data.llmExplanation ?? "No explanation provided.",
             status:          data.status ?? "success"
         };
@@ -51,6 +52,23 @@ export async function analyzeJobViaFlask(job: JobInput): Promise<AnalysisResult>
         throw new Error(err.message || "Failed to connect to detection server.");
     }
 }
+
+/**
+ * submitFeedback — sends user corrections to the Python backend for self-learning.
+ */
+export async function submitFeedback(label: 'fraud' | 'legit', jobId: string = "manual"): Promise<void> {
+    try {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        await fetch(`${API_URL}/api/feedback/report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId, actualLabel: label, comments: "User feedback from UI" }),
+        });
+    } catch (err) {
+        console.error('[mlEngine] Feedback Error:', err);
+    }
+}
+
 /**
  * analyzeJob — Alias for analyzeJobViaFlask to support legacy page calls.
  */
