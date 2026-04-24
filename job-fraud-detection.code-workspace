@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "Frontend (Vite + React)",
+			"path": "frontend"
+		},
+		{
+			"name": "Backend (Flask + ML)",
+			"path": "backend"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"node_modules/": true
+		}
+	}
+}

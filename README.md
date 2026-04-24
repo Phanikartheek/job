@@ -1,15 +1,13 @@
-# AI-Powered Job Fraud Detection System
+# RecruitGuard — AI-Powered Job Fraud Detection System
 
-An intelligent web application that detects fraudulent job postings using a multi-model machine learning pipeline.
+An intelligent web application that detects fraudulent job postings using a multi-model machine learning pipeline (70/30 weight formula).
 
 ## Features
 
-- **Real-time Single Job Analysis** — Paste any job posting and get an instant fraud score (0–100)
-- **Bulk CSV Upload** — Analyze thousands of job listings in one upload
-- **4-Model ML Pipeline** — Text Analyzer + Anomaly Detector + Metadata Classifier + Fusion Model
-- **Risk Levels** — LOW / MEDIUM / HIGH / CRITICAL with human-readable fraud flags
-- **PDF Reports** — Download detailed analysis reports
-- **Dashboard** — View history and aggregate fraud statistics
+- **Real-time Single Job Analysis** — Instant fraud score (0–100) using RoBERTa and Isolation Forest.
+- **70/30 Weighted Ensemble** — 70% Content Analysis + 30% Metadata Analysis.
+- **Risk Levels** — LOW / MEDIUM / HIGH / CRITICAL with detailed indicators.
+- **Professional Architecture** — Separated frontend and backend modules.
 
 ## How to Run Locally
 
@@ -20,19 +18,18 @@ An intelligent web application that detects fraudulent job postings using a mult
 git clone https://github.com/Phanikartheek/job.git
 cd job
 
-# 2. Install frontend dependencies
+# 2. Install dependencies (Root)
+pip install -r requirements.txt
+
+# 3. Backend Setup
+# The models are already in backend/models/
+# Start Flask backend
+cd backend
+python app.py
+
+# 4. Frontend Setup (in a new terminal)
+cd frontend
 npm install
-
-# 3. Install Python dependencies
-pip install flask flask-cors scikit-learn numpy joblib
-
-# 4. Train ML models (one time only)
-python python_models/train_models.py
-
-# 5. Start Flask backend
-python flask_backend/app.py
-
-# 6. Start React frontend (in a new terminal)
 npm run dev
 ```
 
@@ -43,22 +40,30 @@ Backend API runs at `http://localhost:5000`
 
 ```
 job-main/
-├── src/               ← React frontend (pages + components)
-├── flask_backend/     ← Flask REST API
-├── python_models/     ← ML model scripts + trained .pkl files
-├── supabase/          ← Database configuration
-└── public/            ← Static assets
+├── backend/            ← "The Brain": Professional Modular ML API
+│   ├── api/            ← API routes and middleware
+│   ├── core/           ← ML Engines and scoring logic
+│   ├── models/         ← Trained model artifacts (.pkl)
+│   ├── scripts/        ← Training & evaluation pipelines
+│   ├── tests/          ← Automated unit tests
+│   └── app.py          ← Clean entry point
+├── frontend/           ← UI/UX: React + TypeScript
+├── requirements.txt    ← Integrated dependencies
+└── render.yaml         ← Cloud deployment config
 ```
 
 ## Technologies Used
 
-- React + Vite + TypeScript
-- Tailwind CSS
-- Python Flask (REST API)
-- scikit-learn (TF-IDF, Logistic Regression, Isolation Forest, Random Forest)
-- Supabase (PostgreSQL)
+- **Frontend:** React, Vite, TypeScript, Tailwind CSS
+- **Backend:** Python Flask
+- **ML Models:** RoBERTa (Transformers), Isolation Forest, XGBoost
+- **Database:** Supabase
 
-## Deployment
+## 🚀 Future Enhancements
 
-- **Frontend:** Deployed on [Vercel](https://vercel.com)
-- **Backend:** Deployed on [Render](https://render.com)
+- **Real-time Monitoring** — Enable real-time job monitoring via APIs from LinkedIn, Indeed, and Glassdoor.
+- **Multilingual Support** — Expand to multilingual analysis using mBERT and XLM-R.
+- **Browser Extensions** — Develop browser extensions for Google Chrome, Mozilla Firefox, and Microsoft Edge for instant on-page analysis.
+- **Identity Verification** — Use blockchain to verify employer identities and prevent impersonation.
+- **Active Learning** — Implement Active Learning with human feedback for continuous model improvement.
+- **Enhanced Accuracy** — Integrate RoBERTa and LLMs for better accuracy and explainable fraud detection.

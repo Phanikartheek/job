@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "title": "Data Entry Specialist - Work from Home",
+    "company": "Fast Cash Ventures",
+    "description": "Urgent hiring! No experience required. Start today and earn $3000 weekly guaranteed. Must have WhatsApp for contact. Pay a small registration fee for training materials.",
+    "requirements": "Basic computer skills, ability to follow instructions.",
+    "salary": "$3000/week",
+    "status": "expected_fraud"
+  },
+  {
+    "id": 2,
+    "title": "Senior Backend Engineer",
+    "company": "Amazon Web Services (AWS)",
+    "description": "Join the AWS Elastic Beanstalk team to build highly scalable cloud infrastructure. You will work in an agile environment with top-tier engineers. Competitive salary, 401k, health benefits, and equity provided. Relocation assistance available.",
+    "requirements": "5+ years Python or Java, experience with distributed systems (AWS, GCP, Azure), strong CS fundamentals.",
+    "salary": "$160,000 - $220,000",
+    "status": "expected_safe"
+  },
+  {
+    "id": 3,
+    "title": "International Package Relay Assistant",
+    "company": "Global Logistics Hub",
+    "description": "Accept and reship packages from the comfort of your home. Earn commission per package handled. No interview necessary. We provide all labels.",
+    "requirements": "Available to receive packages at home address, reliable internet.",
+    "salary": "Commission based ($2000+ monthly)",
+    "status": "expected_fraud"
+  }
+]
