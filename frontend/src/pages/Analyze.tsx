@@ -245,145 +245,171 @@ const Analyze = () => {
 
         {/* Upload Tab */}
         <TabsContent value="upload" className="space-y-6">
-          <div className="p-6 md:p-8 rounded-2xl bg-card-gradient border border-border shadow-card">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Upload Job Posting</h3>
-                <p className="text-sm text-muted-foreground">
-                  Upload a screenshot, PDF, or document containing the job posting. Our AI will extract and analyze the content.
+          <div className="p-6 md:p-8 rounded-2xl bg-card-gradient border border-border shadow-card relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+              <Search className="w-32 h-32" />
+            </div>
+            
+            {isAnalyzing ? (
+              <div className="py-12 flex flex-col items-center justify-center min-h-[300px] animate-fade-in">
+                <div className="relative w-24 h-24 mb-8">
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500/10" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                </div>
+                <h3 className="text-xl font-bold text-orange-500 mb-2 uppercase tracking-widest animate-pulse">Running Security Scan</h3>
+                <p className="text-muted-foreground text-sm max-w-sm text-center">
+                  Our ensemble ML models are extracting features, checking anomalies, and cross-referencing metadata against known fraud patterns...
                 </p>
               </div>
-
-              <FileDropZone
-                onFileSelect={handleFileSelect}
-                isProcessing={isAnalyzing}
-              />
-
-              {selectedFile && (
-                <div className="flex justify-center">
-                  <Button
-                    onClick={analyzeFile}
-                    variant="analyze"
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        Analyzing with AI...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="w-5 h-5 mr-2" />
-                        Analyze File
-                      </>
-                    )}
-                  </Button>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                    Upload Job Posting
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a screenshot, PDF, or document containing the job posting. Our AI will extract and analyze the content.
+                  </p>
                 </div>
-              )}
-            </div>
+
+                <FileDropZone
+                  onFileSelect={handleFileSelect}
+                  isProcessing={isAnalyzing}
+                />
+
+                {selectedFile && (
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={analyzeFile}
+                      variant="analyze"
+                      disabled={isAnalyzing}
+                      className="bg-orange-600 hover:bg-orange-700 text-white shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-all px-8 py-6 text-lg rounded-xl"
+                    >
+                      <Search className="w-5 h-5 mr-2" />
+                      INITIATE AI SCAN
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </TabsContent>
 
         {/* Manual Tab */}
         <TabsContent value="manual">
           <form onSubmit={handleManualSubmit} className="space-y-6">
-            <div className="p-6 md:p-8 rounded-2xl bg-card-gradient border border-border shadow-card">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Job Title *</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    placeholder="e.g., Senior Software Engineer"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company Name *</Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    placeholder="e.g., Tech Corp Inc."
-                    value={formData.company}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    placeholder="e.g., New York, NY (Remote)"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="salary">Salary Range</Label>
-                  <Input
-                    id="salary"
-                    name="salary"
-                    placeholder="e.g., $80,000 - $120,000"
-                    value={formData.salary}
-                    onChange={handleInputChange}
-                  />
-                </div>
+            <div className="p-6 md:p-8 rounded-2xl bg-card-gradient border border-border shadow-card relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                <PenLine className="w-32 h-32" />
               </div>
 
-              <div className="space-y-2 mt-6">
-                <Label htmlFor="description">Job Description *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  placeholder="Paste the full job description here..."
-                  className="min-h-[160px]"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+              {isAnalyzing ? (
+                 <div className="py-12 flex flex-col items-center justify-center min-h-[400px] animate-fade-in">
+                 <div className="relative w-24 h-24 mb-8">
+                   <div className="absolute inset-0 rounded-full border-4 border-orange-500/10" />
+                   <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                 </div>
+                 <h3 className="text-xl font-bold text-orange-500 mb-2 uppercase tracking-widest animate-pulse">Running Security Scan</h3>
+                 <p className="text-muted-foreground text-sm max-w-sm text-center">
+                   Our ensemble ML models are extracting features, checking anomalies, and cross-referencing metadata against known fraud patterns...
+                 </p>
+               </div>
+              ) : (
+                <>
+                  <div className="grid md:grid-cols-2 gap-6 relative z-10">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Job Title *</Label>
+                      <Input
+                        id="title"
+                        name="title"
+                        placeholder="e.g., Senior Software Engineer"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        required
+                        className="bg-black/20 focus:border-orange-500/50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Company Name *</Label>
+                      <Input
+                        id="company"
+                        name="company"
+                        placeholder="e.g., Tech Corp Inc."
+                        value={formData.company}
+                        onChange={handleInputChange}
+                        required
+                        className="bg-black/20 focus:border-orange-500/50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        name="location"
+                        placeholder="e.g., New York, NY (Remote)"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        className="bg-black/20 focus:border-orange-500/50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="salary">Salary Range</Label>
+                      <Input
+                        id="salary"
+                        name="salary"
+                        placeholder="e.g., $80,000 - $120,000"
+                        value={formData.salary}
+                        onChange={handleInputChange}
+                        className="bg-black/20 focus:border-orange-500/50"
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2 mt-6">
-                <Label htmlFor="requirements">Requirements & Qualifications</Label>
-                <Textarea
-                  id="requirements"
-                  name="requirements"
-                  placeholder="Paste the requirements and qualifications..."
-                  className="min-h-[120px]"
-                  value={formData.requirements}
-                  onChange={handleInputChange}
-                />
-              </div>
+                  <div className="space-y-2 mt-6 relative z-10">
+                    <Label htmlFor="description">Job Description *</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Paste the full job description here..."
+                      className="min-h-[160px] bg-black/20 focus:border-orange-500/50"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
 
-              <div className="mt-8 flex justify-center">
-                <Button
-                  type="submit"
-                  variant="analyze"
-                  disabled={isAnalyzing || !formData.title || !formData.company || !formData.description}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Analyzing with AI...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-5 h-5 mr-2" />
-                      Analyze Job Posting
-                    </>
-                  )}
-                </Button>
-              </div>
+                  <div className="space-y-2 mt-6 relative z-10">
+                    <Label htmlFor="requirements">Requirements & Qualifications</Label>
+                    <Textarea
+                      id="requirements"
+                      name="requirements"
+                      placeholder="Paste the requirements and qualifications..."
+                      className="min-h-[120px] bg-black/20 focus:border-orange-500/50"
+                      value={formData.requirements}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="mt-8 flex justify-center relative z-10">
+                    <Button
+                      type="submit"
+                      variant="analyze"
+                      disabled={isAnalyzing || !formData.title || !formData.company || !formData.description}
+                      className="w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white shadow-[0_0_30px_rgba(234,88,12,0.2)] transition-all px-12 py-6 text-lg font-bold rounded-xl active:scale-[0.98]"
+                    >
+                      <Search className="w-5 h-5 mr-3" />
+                      INITIATE AI SCAN
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </form>
         </TabsContent>
       </Tabs>
 
       {/* Result */}
-      {result && <AnalysisResult result={result} />}
+      {result && !isAnalyzing && <AnalysisResult result={result} />}
     </div>
   );
 };
