@@ -246,6 +246,15 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
                   ? "High-risk indicators detected. Do NOT send money, share personal documents, or communicate outside verified company channels. Cross-check the employer via official sources immediately."
                   : "No major fraud indicators detected. However, always verify employer authenticity through official websites and avoid sharing sensitive information prematurely."}
               </p>
+              {!isFake && (
+                <div className="mt-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-orange-400/90 leading-relaxed">
+                    <strong className="text-orange-500">SOPHISTICATED SCAM WARNING:</strong> 
+                    {" "}Professionally written fake jobs can bypass AI text detection. Always verify the company's legal existence (e.g., via MCA India) before proceeding.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -268,10 +277,13 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
           FEEDBACK LEARNING LOOP (NEW)
       ======================== */}
       {!feedbackSent && (
-        <div className="p-6 rounded-2xl bg-black border border-white/10 shadow-card flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-white/90">Is this AI accurate?</p>
-            <p className="text-xs text-white/40">Help train the next version of RecruitGuard by providing feedback.</p>
+        <div className="p-6 rounded-2xl bg-orange-500/5 border border-orange-500/20 shadow-card flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <Shield className="w-16 h-16 text-orange-500" />
+          </div>
+          <div className="relative z-10">
+            <p className="text-sm font-bold text-orange-400 tracking-wide">ACTIVE LEARNING LOOP</p>
+            <p className="text-xs text-white/60 mt-1 max-w-[280px]">Your feedback is logged into the system and used to retrain the models, improving future detection.</p>
           </div>
           <div className="flex gap-3">
             <button 
@@ -363,10 +375,22 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
             </div>
 
             <div>
-              <p className="text-gray-500 uppercase tracking-widest text-xs">
-                Company
-              </p>
-              <p className="text-white font-medium">
+              <div className="flex items-center justify-between">
+                <p className="text-gray-500 uppercase tracking-widest text-xs">
+                  Company
+                </p>
+                {extractedData.company && (
+                  <a 
+                    href="https://www.mca.gov.in/content/mca/global/en/mca/master-data/MDS.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-orange-500 hover:text-orange-400 text-[10px] uppercase font-bold tracking-widest flex items-center gap-1 bg-orange-500/10 px-2 py-0.5 rounded transition-colors"
+                  >
+                    Verify on MCA
+                  </a>
+                )}
+              </div>
+              <p className="text-white font-medium mt-1">
                 {extractedData.company || "Not detected"}
               </p>
             </div>

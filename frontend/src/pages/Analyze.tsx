@@ -317,6 +317,40 @@ const Analyze = () => {
                </div>
               ) : (
                 <>
+                  {/* Quick Paste Feature (Weakness 4 Mitigation) */}
+                  <div className="mb-8 p-4 rounded-xl bg-orange-500/5 border border-orange-500/20 relative z-10">
+                    <h4 className="text-sm font-semibold text-orange-400 mb-2 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" /> Quick Paste (Auto-Extract)
+                    </h4>
+                    <p className="text-xs text-orange-500/70 mb-2">Paste a raw job message (e.g. from WhatsApp) here to automatically extract details.</p>
+                    <Textarea 
+                      id="quickPaste"
+                      placeholder="Paste full job ad here..." 
+                      className="min-h-[80px] bg-black/40 border-orange-500/20 text-sm focus:border-orange-500/50"
+                      onBlur={(e) => {
+                        const text = e.target.value;
+                        if (!text || text.length < 15) return;
+                        
+                        let extracted = { ...formData };
+                        
+                        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+                        if (lines.length > 0 && !extracted.title) extracted.title = lines[0].substring(0, 60);
+                        
+                        const salaryMatch = text.match(/\b(?:\$|₹|INR\s*)?\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*(?:LPA|K|k|lakhs?|\/year|\/month|-|to)\s*(?:\$|₹|INR\s*)?\d{0,3}(?:,\d{3})*(?:\.\d+)?\s*(?:LPA|K|k|lakhs?|\/year|\/month)?\b/i);
+                        if (salaryMatch && !extracted.salary) extracted.salary = salaryMatch[0];
+                        
+                        const companyMatch = text.match(/(?:at|company:?|employer:?)\s+([A-Z][a-zA-Z0-9\s]+(?:Inc\.?|LLC|Ltd\.?|Pvt\.?|Corp\.?|Technologies|Solutions))/i);
+                        if (companyMatch && !extracted.company) extracted.company = companyMatch[1].trim();
+
+                        if (!extracted.description) extracted.description = text;
+                        
+                        setFormData(extracted);
+                        toast.success("Extracted job details!");
+                        e.target.value = ""; 
+                      }}
+                    />
+                  </div>
+
                   <div className="grid md:grid-cols-2 gap-6 relative z-10">
                     <div className="space-y-2">
                       <Label htmlFor="title">Job Title *</Label>

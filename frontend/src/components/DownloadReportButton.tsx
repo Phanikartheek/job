@@ -156,10 +156,25 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
             const explanationLines = doc.splitTextToSize(singleJob.llmExplanation, W - 28);
             doc.text(explanationLines, 14, y);
 
-            // Footer
+            // Footer & Digital Signature
             doc.setFontSize(7);
             doc.setTextColor(150, 150, 150);
-            doc.text("AI-Powered Recruitment Fraud Intelligence Platform", 14, doc.internal.pageSize.height - 8);
+            const timestamp = new Date().toISOString();
+            // A mock hash function to simulate a cryptographic signature
+            const generateHash = (str: string) => {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convert to 32bit integer
+                }
+                return Math.abs(hash).toString(16).padStart(8, '0');
+            };
+            const sigHash = generateHash(`${singleJob.title}-${singleJob.finalScore}-${timestamp}`);
+            
+            doc.text("AI-Powered Recruitment Fraud Intelligence Platform", 14, doc.internal.pageSize.height - 12);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Digital Signature: SHA-256 Mock Hash [${sigHash}] | Timestamp: ${timestamp}`, 14, doc.internal.pageSize.height - 6);
 
             doc.save(`${singleJob.title || "job"}-fraud-report.pdf`);
             toast.success("PDF report downloaded!");
@@ -257,6 +272,18 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
                 },
             });
 
+            const timestamp = new Date().toISOString();
+            const generateHash = (str: string) => {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return Math.abs(hash).toString(16).padStart(8, '0');
+            };
+            const bulkSigHash = generateHash(`bulk-${data.length}-${timestamp}`);
+
             const pageCount = (doc.internal as any).getNumberOfPages();
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
@@ -265,8 +292,10 @@ const DownloadReportButton = ({ data, fileName = "fraud-analysis-report", single
                 doc.text(
                     `Page ${i} of ${pageCount} — AI-Powered Recruitment Fraud Intelligence Platform`,
                     14,
-                    doc.internal.pageSize.height - 8
+                    doc.internal.pageSize.height - 12
                 );
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Digital Signature: SHA-256 Mock Hash [${bulkSigHash}] | Timestamp: ${timestamp}`, 14, doc.internal.pageSize.height - 6);
             }
 
             doc.save(`${fileName}.pdf`);

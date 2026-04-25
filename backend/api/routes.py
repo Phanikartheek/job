@@ -62,6 +62,18 @@ def analyze_job():
         
         insights = scoring.get_detection_insights(all_flags)
         
+        # Weakness 3: English Language limitation check
+        try:
+            from langdetect import detect
+            lang = detect(job["description"])
+            if lang != "en":
+                insights.append({
+                    "type": "warning", 
+                    "msg": f"Non-English text detected ({lang.upper()}). The analysis model is optimized for English; accuracy may be reduced."
+                })
+        except Exception:
+            pass
+        
         # XGBoost results
         xgboost_result = run_xgboost_model(
             text_score=text_result.score,

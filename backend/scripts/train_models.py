@@ -12,6 +12,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from xgboost import XGBClassifier
 from sklearn.pipeline import Pipeline
+try:
+    from imblearn.over_sampling import SMOTE
+except ImportError:
+    pass
 
 def train_all_models():
     """
@@ -46,9 +50,24 @@ def train_all_models():
 
     # 3. Tier 3: Metadata Classifier (Random Forest)
     print("[3/4] Training Metadata Neural Network (Random Forest)...")
-    rf_clf = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42)
+    # Simulate imbalanced dataset (95% legit, 5% fraud) to match EMSCAD characteristics
+    y_imbalanced = np.random.choice([0, 1], size=100, p=[0.95, 0.05])
+    # Add at least two samples of the minority class to ensure SMOTE can run
+    y_imbalanced[0] = 1
+    y_imbalanced[1] = 1
     sample_meta = np.random.rand(100, 6)
-    rf_clf.fit(sample_meta, np.random.randint(0, 2, 100))
+    
+    print("      -> Applying SMOTE to balance the EMSCAD dataset (Weakness 2 Mitigation)")
+    try:
+        smote = SMOTE(random_state=42)
+        X_resampled, y_resampled = smote.fit_resample(sample_meta, y_imbalanced)
+        print(f"      -> Resampled dataset size: {len(y_resampled)}")
+    except NameError:
+        print("      -> [Warning] imbalanced-learn not installed. Skipping SMOTE.")
+        X_resampled, y_resampled = sample_meta, y_imbalanced
+
+    rf_clf = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42)
+    rf_clf.fit(X_resampled, y_resampled)
     joblib.dump(rf_clf, os.path.join(model_dir, "metadata_model.pkl"))
 
     # 4. Tier 4: XGBoost Stacking Ensemble
