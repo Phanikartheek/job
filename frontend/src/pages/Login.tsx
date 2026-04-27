@@ -218,12 +218,27 @@ const Login = () => {
             </div>
           </div>
 
+          <div className="flex gap-3 p-1.5 rounded-2xl bg-secondary/50 backdrop-blur-sm border border-border/50">
+            <button type="button" onClick={() => setIsSignUp(false)} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${!isSignUp ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25' : 'text-muted-foreground hover:text-foreground'}`}>
+              <LogIn className="w-4 h-4" /> Sign In
+            </button>
+            <button type="button" onClick={() => setIsSignUp(true)} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${isSignUp ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' : 'text-muted-foreground hover:text-foreground'}`}>
+              <UserPlus className="w-4 h-4" /> Register
+            </button>
+          </div>
+
           <div className="space-y-2 text-center lg:text-left">
-            <h2 className="text-3xl font-bold text-foreground">Welcome back</h2>
-            <p className="text-muted-foreground">Sign in to access your fraud detection dashboard</p>
+            <h2 className="text-3xl font-bold text-foreground">{isSignUp ? "Create your account" : "Welcome back"}</h2>
+            <p className="text-muted-foreground">{isSignUp ? "Join thousands protecting themselves from job scams" : "Sign in to access your fraud detection dashboard"}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input id="fullName" placeholder="John Doe" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="h-12 rounded-xl" />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input id="email" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setErrors({ ...errors, email: "" }); }} className={`h-12 rounded-xl ${errors.email ? "border-destructive" : ""}`} required />
@@ -240,19 +255,35 @@ const Login = () => {
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
 
-            <div className="flex items-center justify-end">
-              <Link to="/forgot-password" className="text-sm text-cyan-500 hover:text-cyan-400 font-medium">Forgot password?</Link>
-            </div>
+            {!isSignUp && (
+              <div className="flex items-center justify-end">
+                <Link to="/forgot-password" className="text-sm text-cyan-500 hover:text-cyan-400 font-medium">Forgot password?</Link>
+              </div>
+            )}
 
-            <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white">
-              {isLoading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Signing in...</> : <>Sign In<ArrowRight className="w-5 h-5 ml-2" /></>}
+            <Button type="submit" disabled={isLoading} className={`w-full h-12 rounded-xl font-semibold ${isSignUp ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600' : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600'} text-white`}>
+              {isLoading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isSignUp ? "Creating..." : "Signing in..."}</> : <>{isSignUp ? "Create Account" : "Sign In"}<ArrowRight className="w-5 h-5 ml-2" /></>}
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground pt-4">
-            Authorized access only. Registration is currently disabled.
-          </p>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">Or continue with</span></div>
+          </div>
 
+          <Button type="button" variant="outline" onClick={handleGoogleSignIn} disabled={isLoading} className="w-full h-12 rounded-xl">
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+            </svg>
+            Continue with Google
+          </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            By continuing, you agree to our <a href="#" className="text-cyan-500 hover:text-cyan-400">Terms</a> and <a href="#" className="text-cyan-500 hover:text-cyan-400">Privacy Policy</a>
+          </p>
         </div>
       </div>
     </div>
