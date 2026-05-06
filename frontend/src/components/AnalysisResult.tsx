@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import ModelScorePanel from "@/components/ModelScorePanel";
 import LLMExplanationPanel from "@/components/LLMExplanationPanel";
+import SHAPExplanationPanel from "@/components/SHAPExplanationPanel";
 import DownloadReportButton from "@/components/DownloadReportButton";
 import { RiskRadar } from "./RiskRadar";
 import { InsightCard } from "./InsightCard";
@@ -103,6 +104,7 @@ interface AnalysisResultProps {
     contentScore?: number;
     xgboostScore?: number;
     llmExplanation?: string;
+    shapExplanation?: any;
   };
 }
 
@@ -323,6 +325,11 @@ const AnalysisResult = ({ result }: AnalysisResultProps) => {
         explanation={llmExplanation || defaultExplanation}
         riskLevel={isFake ? (confidence >= 75 ? "CRITICAL" : "HIGH") : riskLevel as any}
       />
+
+      {/* =======================
+          SHAP EXPLANATION PANEL (NEW)
+      ======================== */}
+      <SHAPExplanationPanel shapData={result.shapExplanation} />
 
       {/* =======================
           DOWNLOAD REPORT BUTTON

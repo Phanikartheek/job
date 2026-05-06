@@ -47,7 +47,7 @@ const BulkUploadPage = () => {
 
         for (let i = 0; i < rows.length; i++) {
             const job = toJob(rows[i]);
-            const scores = analyzeJob(job);
+            const scores = await analyzeJob(job);
             processed.push({
                 id: i + 1,
                 title: job.title || `Row ${i + 1}`,
@@ -87,7 +87,7 @@ const BulkUploadPage = () => {
 
             for (let start = 0; start < jobs.length; start += BATCH) {
                 const batch = jobs.slice(start, start + BATCH);
-                const API_URL = import.meta.env.VITE_API_URL || "";
+                const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
                 const res = await fetch(`${API_URL}/api/analyze-bulk`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

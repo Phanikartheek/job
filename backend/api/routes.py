@@ -4,10 +4,11 @@ from datetime import datetime
 # Import core engines and logic
 from core.engines.textModel import run_text_model
 from core.engines.anomalyModel import run_anomaly_model
-from core.engines.metadataModel import run_metadata_model
+from core.engines.metadataModel import run_metadata_model, _extract_metadata_features
 from core.engines.contentModel import run_content_model
 from core.engines.xgboostModel import run_xgboost_model
 from core.logic.scoring_logic import ScoringLogic
+from core.engines.explainability import explain_text_model, explain_metadata_model
 
 api_bp = Blueprint('api', __name__)
 
@@ -53,6 +54,8 @@ def analyze_job():
             metadata_score=metadata_result.score
         )
         risk_level = scoring.determine_risk_level(final_score)
+
+        # ML models make the prediction — no hardcoded overrides
         
         # Collect and humanize flags (The Reasoning Engine)
         all_flags = []
@@ -80,6 +83,18 @@ def analyze_job():
             anomaly_score=anomaly_result.score,
             metadata_score=metadata_result.score
         )
+
+        # Compute SHAP explanations
+        combined_text = " ".join(filter(None, [
+            job.get("title", ""),
+            job.get("description", ""),
+            job.get("requirements", ""),
+            job.get("company", ""),
+        ]))
+        text_shap = explain_text_model(combined_text)
+        
+        features_array, _ = _extract_metadata_features(job)
+        metadata_shap = explain_metadata_model(features_array)
         
         return jsonify({
             'isFake':          final_score >= 50,
@@ -92,10 +107,17 @@ def analyze_job():
             'finalScore':      final_score,
             'riskLevel':       risk_level,
             'insights':        insights,
+            'llmExplanation':  f"The ensemble ML pipeline has analyzed the text content and structural anomalies. The final fraud score is {final_score}% ({risk_level} risk), with a text sub-score of {text_result.score}% and anomaly sub-score of {anomaly_result.score}%.",
+            'shapExplanation': {
+                'text': text_shap,
+                'metadata': metadata_shap
+            },
             'status':          'success'
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
 @api_bp.route('/info', methods=['GET'])
@@ -105,3 +127,45 @@ def get_info():
         'version': '2.0.0',
         'architecture': 'Modular Blueprint'
     })
+
+@api_bp.route('/analyze-bulk', methods=['POST'])
+def analyze_bulk_jobs():
+    """Bulk analysis endpoint"""
+    try:
+        data = request.json or {}
+        jobs = data.get("jobs", [])
+        results = []
+        for i, j in enumerate(jobs):
+            # Run the ML models
+            text_result = run_text_model(j)
+            anomaly_result = run_anomaly_model(j)
+            metadata_result = run_metadata_model(j)
+            content_result = run_content_model(j)
+            
+            final_score = scoring.calculate_final_score(
+                content_score=content_result.score,
+                metadata_score=metadata_result.score
+            )
+            risk_level = scoring.determine_risk_level(final_score)
+
+            # Purely model-driven final_score and risk_level - no hardcoded overrides
+
+            results.append({
+                "id": i + 1,
+                "title": j.get("title", f"Job {i + 1}"),
+                "company": j.get("company", "Unknown"),
+                "location": j.get("location", ""),
+                "salary": j.get("salary", ""),
+                "textScore": text_result.score,
+                "anomalyScore": anomaly_result.score,
+                "metadataScore": metadata_result.score,
+                "contentScore": content_result.score,
+                "finalScore": final_score,
+                "riskLevel": risk_level,
+                "factors": text_result.flags + anomaly_result.flags,
+                "llmExplanation": "Bulk analysis complete."
+            })
+            
+        return jsonify({"results": results, "status": "success"})
+    except Exception as e:
+        return jsonify({'error': f'Bulk analysis failed: {str(e)}'}), 500

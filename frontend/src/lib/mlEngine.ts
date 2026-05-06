@@ -21,7 +21,6 @@ export async function analyzeJobViaFlask(job: JobInput): Promise<AnalysisResult>
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(job),
-            signal: AbortSignal.timeout(10000), // 10s timeout
         });
 
         if (!response.ok) {
@@ -45,6 +44,7 @@ export async function analyzeJobViaFlask(job: JobInput): Promise<AnalysisResult>
             factors:         data.factors ?? [],
             insights:        data.insights ?? [],
             llmExplanation:  data.llmExplanation ?? "No explanation provided.",
+            shapExplanation: data.shapExplanation,
             status:          data.status ?? "success"
         };
     } catch (err: any) {

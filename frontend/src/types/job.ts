@@ -25,5 +25,6 @@ export interface AnalysisResult {
     factors: string[];
     insights?: Array<{ type: string; msg: string }>;
     llmExplanation: string;
+    shapExplanation?: any;
     status: string;
 }

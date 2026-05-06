@@ -1,0 +1,79 @@
+{
+  "trained_at": "2026-05-06T21:11:50.682574",
+  "dataset_size": 2000,
+  "fraud_samples": 100,
+  "legit_samples": 1900,
+  "models": {
+    "text_model": {
+      "model": "Text Analyzer",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "confusion_matrix": [
+        [
+          380,
+          0
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "roc_auc": 1.0
+    },
+    "anomaly_model": {
+      "model": "Anomaly Detector",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "confusion_matrix": [
+        [
+          378,
+          0
+        ],
+        [
+          0,
+          22
+        ]
+      ]
+    },
+    "metadata_model": {
+      "model": "Metadata Classifier",
+      "accuracy": 0.725,
+      "precision": 0.1538,
+      "recall": 1.0,
+      "f1_score": 0.2667,
+      "confusion_matrix": [
+        [
+          270,
+          110
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "roc_auc": 0.8895
+    },
+    "xgboost_model": {
+      "model": "XGBoost Ensemble",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "confusion_matrix": [
+        [
+          380,
+          0
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "roc_auc": 1.0
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # ============================================================
-# MODEL 1: RoBERTa Text Analyzer — REAL ML VERSION
-# Trained on 17,880 real EMSCAD job postings.
+# MODEL 1: Text Analyzer — REAL ML VERSION
+# Trained on real job postings dataset.
 # Uses TF-IDF Vectorizer + Logistic Regression (scikit-learn).
 #
 # Run standalone:  python python_models/textModel.py
@@ -33,7 +33,7 @@ _pipeline = joblib.load(MODEL_PATH)
 class TextModelResult:
     score: int
     flags: List[str]
-    model_name: str = "RoBERTa Text Analyzer (ML)"
+    model_name: str = "Text Analyzer (TF-IDF + Logistic Regression)"
     fraud_probability: float = 0.0
     fraud_keywords_hit: List[str] = field(default_factory=list)
     safe_keywords_hit: int = 0
@@ -41,7 +41,7 @@ class TextModelResult:
 
 def run_text_model(job: dict) -> TextModelResult:
     """
-    RoBERTa Text Analyzer — Model 1 (Real ML Version)
+    Text Analyzer — Model 1 (TF-IDF + Logistic Regression)
     Uses TF-IDF + Logistic Regression trained on 17,880 real EMSCAD postings.
 
     The model learns real language patterns from genuine fraud vs legitimate
@@ -78,23 +78,28 @@ def run_text_model(job: dict) -> TextModelResult:
         "processing fee", "registration fee", "send money", "wire transfer",
         "whatsapp only", "telegram only", "same day pay",
         "no interview", "uncapped earnings", "passive income",
+        "withdraw your offer", "externship", "urgent opportunity"
     ]
     for phrase in flag_phrases:
         if phrase in text_lower:
             fraud_keywords_hit.append(phrase)
             flags.append(f'Suspicious phrase detected: "{phrase}"')
+            score += 15
 
     desc = job.get("description", "")
     if len(desc) < 100:
         flags.append("Job description is suspiciously short or vague")
+        score += 10
 
     caps_count = len(re.findall(r'[A-Z]{4,}', desc + job.get("title", "")))
     if caps_count > 3:
         flags.append("Excessive capitalization detected (common in scam postings)")
+        score += 10
 
     safe_phrases = ["health insurance", "401k", "paid time off", "career growth",
                     "equity", "mentorship", "competitive salary", "agile", "sprint"]
     safe_hits = sum(1 for p in safe_phrases if p in text_lower)
+    score -= safe_hits * 12
 
     return TextModelResult(
         score=min(100, max(0, score)),

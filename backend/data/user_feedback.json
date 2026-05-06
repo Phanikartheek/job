@@ -1,0 +1,16 @@
+[
+    {
+        "jobId": "manual",
+        "actualLabel": "fraud",
+        "comments": "User feedback from UI",
+        "timestamp": "2026-05-01T13:16:01.262652",
+        "status": "pending_retrain"
+    },
+    {
+        "jobId": "manual",
+        "actualLabel": "fraud",
+        "comments": "User feedback from UI",
+        "timestamp": "2026-05-01T13:16:29.133924",
+        "status": "pending_retrain"
+    }
+]

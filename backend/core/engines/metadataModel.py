@@ -1,6 +1,6 @@
 # ============================================================
-# MODEL 3: Metadata Neural Network — REAL ML VERSION
-# Trained on 17,880 real EMSCAD job postings (metadata features).
+# MODEL 3: Metadata Classifier — REAL ML VERSION
+# Trained on real job postings dataset (metadata features).
 # Uses Random Forest Classifier (scikit-learn) on 6 metadata features.
 #
 # Run standalone:  python python_models/metadataModel.py
@@ -33,7 +33,7 @@ _model = joblib.load(MODEL_PATH)
 class MetadataModelResult:
     score: int
     flags: List[str]
-    model_name: str = "Metadata Neural Network (ML)"
+    model_name: str = "Metadata Classifier (Random Forest)"
     fraud_probability: float = 0.0
     salary_flag: bool = False
     email_flag: bool = False
@@ -134,7 +134,7 @@ def _extract_metadata_features(job: dict):
 
 def run_metadata_model(job: dict) -> MetadataModelResult:
     """
-    Metadata Neural Network — Model 3 (Real ML Version)
+    Metadata Classifier — Model 3 (Random Forest)
     Trained on Random Forest using 6 metadata features from 17,880 EMSCAD postings.
 
     Args:

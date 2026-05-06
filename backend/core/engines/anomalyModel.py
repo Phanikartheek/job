@@ -134,6 +134,12 @@ def run_anomaly_model(job: dict) -> AnomalyModelResult:
     if fraud_score > 50 and not anomalies_found:
         anomalies_found.append("STRUCTURAL_ANOMALY")
 
+    # Dynamic scoring refinement
+    for a in anomalies_found:
+        fraud_score += 18
+    if not anomalies_found:
+        fraud_score -= 22
+
     flags = [ANOMALY_MESSAGES.get(a, a) for a in anomalies_found]
 
     return AnomalyModelResult(
